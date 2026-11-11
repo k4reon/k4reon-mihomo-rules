@@ -250,18 +250,19 @@ rule-providers:
 # Порядок:
 #  1. private → DIRECT
 #  2. ads → REJECT (до RU, иначе .ru перебьёт блокировку)
-#  3. ru → DIRECT
-#  4. torrent → DIRECT
-#  5. youtube → YouTube
-#  6. games → Games (IP только для UDP)
-#  7. discord → Discord
-#  8. ai → Ai (до Google!)
-#  9. google → DIRECT (поиск с российским IP)
-# 10. messengers → Messengers
-# 11. social → Fast
-# 12. custom → PROXY/DIRECT
-# 13. GEOIP RU/SU → DIRECT
-# 14. MATCH → PROXY
+#  3. custom-proxy → PROXY (до RU, иначе DOMAIN-SUFFIX,ru перебьёт)
+#  4. ru → DIRECT
+#  5. torrent → DIRECT
+#  6. youtube → YouTube
+#  7. games → Games (IP только для UDP)
+#  8. discord → Discord
+#  9. ai → Ai (до Google!)
+# 10. google → DIRECT (поиск с российским IP)
+# 11. messengers → Messengers
+# 12. social → Fast
+# 13. custom-direct → DIRECT
+# 14. GEOIP RU/SU → DIRECT
+# 15. MATCH → PROXY
 rules:
   # --- Локальные сети ---
   - RULE-SET,k4reon-private-domains,DIRECT

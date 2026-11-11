@@ -41,9 +41,9 @@ https://ssclash.notion.site/Mihomo-SSClash-15989188f6b48051a97fc887adea736a
 | google | 1047 | 4 | DIRECT |
 | messengers | 41 | 24 | Messengers |
 | social | 609 | 23 | Fast |
-| custom | 11 | — | PROXY / DIRECT |
+| custom | 28 | — | PROXY / DIRECT |
 
-Итого около 5700 доменов и 134 CIDR.
+Итого около 5720 доменов и 134 CIDR.
 
 ## Структура
 
@@ -140,23 +140,25 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 
 1. `private` → DIRECT
 2. `ads` → REJECT
-3. `ru` → DIRECT
-4. `torrent` → DIRECT
-5. `youtube` → YouTube
-6. `games` → Games
-7. `discord` → Discord
-8. `ai` → Ai
-9. `google` → DIRECT
-10. `messengers` → Messengers
-11. `social` → Fast
-12. `custom` → PROXY / DIRECT
-13. `GEOIP,RU/SU` → DIRECT (только в PROXY)
-14. `MATCH` → PROXY или DIRECT
+3. `custom-proxy` → PROXY (выше RU, иначе `.ru` из `ru-classical` перебьёт)
+4. `ru` → DIRECT
+5. `torrent` → DIRECT
+6. `youtube` → YouTube
+7. `games` → Games
+8. `discord` → Discord
+9. `ai` → Ai
+10. `google` → DIRECT
+11. `messengers` → Messengers
+12. `social` → Fast
+13. `custom-direct` → DIRECT
+14. `GEOIP,RU/SU` → DIRECT (только в PROXY)
+15. `MATCH` → PROXY или DIRECT
 
 Ключевые решения:
 
-- **Реклама выше RU.** `category-ru` содержит TLD `.ru`, поэтому
-  `adriver.ru` и другие `.ru`-рекламники нужно блокировать до RU-правил.
+- **Реклама и custom-proxy выше RU.** `category-ru` содержит TLD `.ru`,
+  поэтому `adriver.ru` и другие `.ru`-рекламники нужно блокировать до RU-правил,
+  а `.ru`-домены из `custom-proxy` — иначе они уйдут в DIRECT по `DOMAIN-SUFFIX,ru`.
 - **AI и YouTube выше Google.** Иначе `google.com` перехватит
   `gemini.google.com` и `youtube.com` и отправит их в DIRECT.
 - **Google намеренно DIRECT** — поиск должен видеть российский IP.

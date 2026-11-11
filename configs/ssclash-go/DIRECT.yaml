@@ -231,13 +231,13 @@ rule-providers:
 # =======================
 # Порядок:
 #  1. ads → REJECT
-#  2. youtube → YouTube
-#  3. games → Games (IP только для UDP)
-#  4. discord → Discord
-#  5. ai → Ai
-#  6. messengers → Messengers
-#  7. social → Fast
-#  8. custom-proxy → PROXY
+#  2. custom-proxy → PROXY
+#  3. youtube → YouTube
+#  4. games → Games (IP только для UDP)
+#  5. discord → Discord
+#  6. ai → Ai
+#  7. messengers → Messengers
+#  8. social → Fast
 #  9. MATCH → DIRECT
 rules:
   # --- Реклама ---
