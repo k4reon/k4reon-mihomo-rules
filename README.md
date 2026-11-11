@@ -172,6 +172,9 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 Порты и `AND` лежат в `*-ports.txt` / `*-classical.txt`
 (`behavior: classical`, `format: text`).
 
+Домены в базе собираются как **суффиксные** (`+.domain`), а не точные.
+Иначе `www.google.com` не совпал бы с `google.com` и ушёл бы в `MATCH`.
+
 ## Как использовать
 
 **Вариант 1 — полный конфиг.**
