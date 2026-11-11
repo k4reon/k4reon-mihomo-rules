@@ -35,6 +35,21 @@
 
 Итого около 5700 доменов и 134 CIDR.
 
+## Структура
+
+```
+configs/     полные конфиги PROXY и DIRECT (можно использовать как есть)
+dist/        готовые k4reon-*.mrs и classical-*.txt
+rules/       исходные списки по категориям + denylist
+scripts/     merge.py — слияние и фильтрация
+sources.json откуда брать публичные списки
+build.ps1 / build.sh
+```
+
+`configs/*.yaml` — это полные конфиги в стиле SSClash-Go: tproxy,
+DNS, sniffer, proxy-providers, группы `fallback`/`url-test`/`select`,
+rule-providers и rules. Их можно брать целиком, а не собирать по частям.
+
 ## Источники
 
 База собрана из публичных списков:
@@ -140,8 +155,8 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 и скопировать на роутер как `config.yaml` (или в профиль SSClash).
 
 **Вариант 2 — только правила.**
-Взять `profiles/PROXY.yaml` или `profiles/DIRECT.yaml` и перенести
-блоки `rule-providers` и `rules` в существующий конфиг.
+Перенести блоки `rule-providers` и `rules` из `configs/PROXY.yaml`
+или `configs/DIRECT.yaml` в существующий конфиг.
 
 Если в конфиге уже есть anchors, строки можно сократить:
 
@@ -201,8 +216,6 @@ GitHub Actions пересобирает `dist/` на каждый пуш.
 ```
 configs/PROXY.yaml   → test is successful
 configs/DIRECT.yaml  → test is successful
-profiles/PROXY.yaml  → test is successful (24 провайдера, 27 правил)
-profiles/DIRECT.yaml → test is successful (16 провайдеров, 17 правил)
 ```
 
 ## Дисклеймер

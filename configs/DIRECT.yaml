@@ -1,12 +1,15 @@
 # ============================================================
-#  mihomo — полный конфиг, профиль DIRECT (MATCH,DIRECT)
-#  Для домашнего роутера в России (tproxy).
+#  mihomo / SSClash-Go — профиль DIRECT (MATCH,DIRECT)
+#  Полный конфиг для домашнего роутера в России (tproxy).
 #
-#  Всё, что не совпало, идёт напрямую. В прокси уходят только
-#  YouTube, игры, Discord, AI, мессенджеры, соцсети и custom-proxy.
-#  Реклама блокируется.
+#  Логика: всё, что не совпало, идёт напрямую. В прокси уходят
+#  только YouTube, игры, Discord, AI, мессенджеры, соцсети
+#  и custom-proxy. Реклама блокируется.
 #
-#  Замени url подписки в proxy-providers.
+#  RU/private/torrent/google/GEOIP здесь не нужны: их и так
+#  покрывает MATCH,DIRECT.
+#
+#  Перед использованием заменить url подписки.
 # ============================================================
 
 mode: rule
@@ -42,10 +45,14 @@ disable-keep-alive: false
 
 external-controller: 127.0.0.1:9090
 
+# =======================
+# DNS
+# =======================
 dns:
   enable: true
   listen: 127.0.0.1:7874
   ipv6: false
+
   cache-algorithm: arc
   respect-rules: false
 
@@ -58,17 +65,20 @@ dns:
     - 8.8.8.8
 
   nameserver:
-    - 'https://dns.quad9.net/dns-query#PROXY'
-    - 'https://1.1.1.1/dns-query#PROXY'
+    - 'https://dns.quad9.net/dns-query#Fast'
+    - 'https://1.1.1.1/dns-query#Fast'
 
   nameserver-policy:
     '+.lan': system
     '+.local': system
-    '+.kion.ru': system
-    '+.wink.ru': system
+    "+.kion.ru": system
+    "+.wink.ru": system
     'geosite:category-ru': [77.88.8.8, 77.88.8.1]
     'rule-set:k4reon-ai-domains': 'https://1.1.1.1/dns-query#Ai'
 
+# =======================
+# SNIFFER
+# =======================
 sniffer:
   enable: true
   force-dns-mapping: true
@@ -85,11 +95,17 @@ sniffer:
     - '+.apple.com'
     - '+.icloud.com'
 
+# =======================
+# ANCHORS
+# =======================
 anchors:
   a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
   a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200 }
   a3: &classical { type: http, format: text, behavior: classical, interval: 43200 }
 
+# =======================
+# PROXY PROVIDERS
+# =======================
 proxy-providers:
   main:
     type: http
@@ -99,58 +115,95 @@ proxy-providers:
     path: ./providers/main.yaml
     health-check:
       enable: true
-      url: http://www.gstatic.com/generate_204
-      interval: 300
-      timeout: 2000
+      url: http://cp.cloudflare.com/generate_204
+      interval: 600
+      timeout: 5000
       expected-status: 204
-      lazy: false
+      lazy: true
 
+# =======================
+# PROXY GROUPS
+# =======================
+# Группы те же, что в PROXY-профиле: даже при MATCH,DIRECT
+# игры/YouTube/Discord/AI/мессенджеры должны иметь свой выход.
 proxy-groups:
   - name: PROXY
-    type: select
-    proxies: [Fast, DIRECT]
+    type: fallback
+    proxies:
+      - Fast
+      - DIRECT
+    url: http://cp.cloudflare.com/generate_204
+    interval: 600
+    timeout: 5000
+    lazy: true
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Global.png
 
   - name: Fast
-    type: select
+    type: url-test
     include-all: true
+    #filter: "^(?!.*(🇷🇺)).*$"
+    url: http://cp.cloudflare.com/generate_204
+    interval: 600
+    tolerance: 50
+    timeout: 5000
+    lazy: true
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Rocket.png
 
   - name: YouTube
-    type: select
+    type: fallback
     include-all: true
-    # filter: "(?i)(FI|SE|NL|DE|CZ)"
+    #filter: "(?i)(🇫🇮|🇸🇪|🇳🇱|🇩🇪|🇨🇿)"
+    url: http://cp.cloudflare.com/generate_204
+    interval: 600
+    timeout: 5000
+    lazy: true
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/YouTube.png
 
   - name: Ai
-    type: select
+    type: fallback
     include-all: true
-    # filter: "(?i)(HU|BG|PL|CZ|DE|AT|NL)"
+    #filter: "(?i)(🇭🇺|🇧🇬|🇵🇱|🇨🇿|🇩🇪|🇦🇹|🇳🇱)"
+    url: http://cp.cloudflare.com/generate_204
+    interval: 600
+    timeout: 5000
+    lazy: true
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/ChatGPT.png
 
   - name: Discord
-    type: select
+    type: fallback
     include-all: true
+    url: http://cp.cloudflare.com/generate_204
+    interval: 600
+    timeout: 5000
+    lazy: true
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Discord.png
 
   - name: Games
     type: select
     include-all: true
     proxies: [DIRECT]
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Game.png
 
   - name: Messengers
-    type: url-test
+    type: fallback
     include-all: true
-    # filter: "^(?!.*(RU)).*$"
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-    lazy: false
+    url: http://cp.cloudflare.com/generate_204
+    interval: 600
+    timeout: 5000
+    lazy: true
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Telegram_X.png
 
   - name: GLOBAL
     type: select
     hidden: true
-    proxies: [PROXY, DIRECT]
+    proxies:
+      - PROXY
+      - DIRECT
 
-# ------------------------------------------------------------
-#  Только то, что должно идти в прокси (плюс REJECT рекламы).
-#  RU/private/torrent/google/GEOIP здесь не нужны: MATCH,DIRECT.
-# ------------------------------------------------------------
+# =======================
+# RULE PROVIDERS
+# =======================
+# Только проксируемые категории + реклама.
 rule-providers:
   k4reon-ads-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ads-domains.mrs }
   k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-domains.mrs }
@@ -169,29 +222,51 @@ rule-providers:
   k4reon-social-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-ip.mrs }
   k4reon-custom-proxy: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-proxy.txt }
 
+# =======================
+# RULES
+# =======================
+# Порядок:
+#  1. ads → REJECT
+#  2. youtube → YouTube
+#  3. games → Games (IP только для UDP)
+#  4. discord → Discord
+#  5. ai → Ai
+#  6. messengers → Messengers
+#  7. social → Fast
+#  8. custom-proxy → PROXY
+#  9. MATCH → DIRECT
 rules:
+  # --- Реклама ---
   - RULE-SET,k4reon-ads-domains,REJECT
 
+  # --- YouTube ---
   - RULE-SET,k4reon-youtube-domains,YouTube
   - RULE-SET,k4reon-youtube-ip,YouTube,no-resolve
 
+  # --- Игры ---
   - RULE-SET,k4reon-games-domains,Games
   - AND,((NETWORK,UDP),(RULE-SET,k4reon-games-ip)),Games
   - RULE-SET,k4reon-games-ports,Games
 
+  # --- Discord ---
   - RULE-SET,k4reon-discord-domains,Discord
   - RULE-SET,k4reon-discord-ip,Discord,no-resolve
   - RULE-SET,k4reon-discord-ports,Discord
 
+  # --- AI / Gemini / нейросети ---
   - RULE-SET,k4reon-ai-domains,Ai
   - RULE-SET,k4reon-ai-ip,Ai,no-resolve
 
+  # --- Мессенджеры ---
   - RULE-SET,k4reon-messengers-domains,Messengers
   - RULE-SET,k4reon-messengers-ip,Messengers,no-resolve
 
+  # --- Соцсети ---
   - RULE-SET,k4reon-social-domains,Fast
   - RULE-SET,k4reon-social-ip,Fast,no-resolve
 
+  # --- Кастомные домены в прокси ---
   - RULE-SET,k4reon-custom-proxy,PROXY
 
+  # --- Всё остальное ---
   - MATCH,DIRECT
