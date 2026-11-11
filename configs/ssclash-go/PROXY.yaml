@@ -1,20 +1,21 @@
 # ============================================================
-#  mihomo / SSClash-Go — профиль DIRECT (MATCH,DIRECT)
+#  mihomo / SSClash-Go — профиль PROXY (MATCH,PROXY)
 #  Полный конфиг для домашнего роутера в России (tproxy).
 #
-#  Логика: всё, что не совпало, идёт напрямую. В прокси уходят
-#  только YouTube, игры, Discord, AI, мессенджеры, соцсети
-#  и custom-proxy. Реклама блокируется.
+#  Логика: всё, что не совпало с правилами, идёт в PROXY.
+#  Поэтому ниже перечислены все исключения: RU, private,
+#  torrents, реклама, сервисы и игры.
 #
-#  RU/private/torrent/google/GEOIP здесь не нужны: их и так
-#  покрывает MATCH,DIRECT.
-#
-#  Перед использованием заменить url подписки.
+#  Перед использованием:
+#    - заменить url подписки в proxy-providers.main;
+#    - при необходимости раскомментировать фильтры групп.
 # ============================================================
 
 mode: rule
 tproxy-port: 7894
 udp: true
+# Full-cone NAT: одно отображение на порт клиента.
+# Даёт открытый NAT в играх; P2P-потоки переиспользуют mapping.
 endpoint-independent-nat: true
 ipv6: false
 log-level: info
@@ -43,11 +44,15 @@ keep-alive-idle: 600
 keep-alive-interval: 30
 disable-keep-alive: false
 
+# SSClash-Go: API только на localhost.
 external-controller: 127.0.0.1:9090
 
 # =======================
 # DNS
 # =======================
+# Обычные запросы — DoH через Fast.
+# .lan/.local и российские сервисы — системный/DNS Яндекса.
+# AI — отдельный DoH через группу Ai.
 dns:
   enable: true
   listen: 127.0.0.1:7874
@@ -79,6 +84,8 @@ dns:
 # =======================
 # SNIFFER
 # =======================
+# Позволяет применять доменные правила, когда приложение
+# подключается по IP. Без него часть трафика уходит в MATCH.
 sniffer:
   enable: true
   force-dns-mapping: true
@@ -106,6 +113,8 @@ anchors:
 # =======================
 # PROXY PROVIDERS
 # =======================
+# Подписка качается напрямую (proxy: DIRECT), чтобы не зависеть
+# от самой прокси. Заменить url.
 proxy-providers:
   main:
     type: http
@@ -124,8 +133,10 @@ proxy-providers:
 # =======================
 # PROXY GROUPS
 # =======================
-# Группы те же, что в PROXY-профиле: даже при MATCH,DIRECT
-# игры/YouTube/Discord/AI/мессенджеры должны иметь свой выход.
+# PROXY — fallback: первый живой из Fast/DIRECT.
+# Fast — url-test: автоматически лучший узел.
+# YouTube/Ai/Discord/Messengers — fallback по своим сервисам.
+# Games — select с DIRECT по умолчанию (игры чаще лучше напрямую).
 proxy-groups:
   - name: PROXY
     type: fallback
@@ -203,9 +214,14 @@ proxy-groups:
 # =======================
 # RULE PROVIDERS
 # =======================
-# Только проксируемые категории + реклама.
+# Все наборы k4reon-*; одна строка на провайдер.
 rule-providers:
+  k4reon-private-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-private-domains.mrs }
+  k4reon-private-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-private-ip.mrs }
   k4reon-ads-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ads-domains.mrs }
+  k4reon-ru-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-domains.mrs }
+  k4reon-ru-classical: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-classical.txt }
+  k4reon-torrent-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-torrent-domains.mrs }
   k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-domains.mrs }
   k4reon-youtube-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-ip.mrs }
   k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
@@ -216,28 +232,47 @@ rule-providers:
   k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
   k4reon-ai-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-domains.mrs }
   k4reon-ai-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-ip.mrs }
+  k4reon-google-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-google-domains.mrs }
+  k4reon-google-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-google-ip.mrs }
   k4reon-messengers-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-domains.mrs }
   k4reon-messengers-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-ip.mrs }
   k4reon-social-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-domains.mrs }
   k4reon-social-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-ip.mrs }
   k4reon-custom-proxy: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-proxy.txt }
+  k4reon-custom-direct: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-direct.txt }
 
 # =======================
 # RULES
 # =======================
 # Порядок:
-#  1. ads → REJECT
-#  2. youtube → YouTube
-#  3. games → Games (IP только для UDP)
-#  4. discord → Discord
-#  5. ai → Ai
-#  6. messengers → Messengers
-#  7. social → Fast
-#  8. custom-proxy → PROXY
-#  9. MATCH → DIRECT
+#  1. private → DIRECT
+#  2. ads → REJECT (до RU, иначе .ru перебьёт блокировку)
+#  3. ru → DIRECT
+#  4. torrent → DIRECT
+#  5. youtube → YouTube
+#  6. games → Games (IP только для UDP)
+#  7. discord → Discord
+#  8. ai → Ai (до Google!)
+#  9. google → DIRECT (поиск с российским IP)
+# 10. messengers → Messengers
+# 11. social → Fast
+# 12. custom → PROXY/DIRECT
+# 13. GEOIP RU/SU → DIRECT
+# 14. MATCH → PROXY
 rules:
+  # --- Локальные сети ---
+  - RULE-SET,k4reon-private-domains,DIRECT
+  - RULE-SET,k4reon-private-ip,DIRECT,no-resolve
+
   # --- Реклама ---
   - RULE-SET,k4reon-ads-domains,REJECT
+
+  # --- RU напрямую ---
+  - RULE-SET,k4reon-ru-domains,DIRECT
+  - RULE-SET,k4reon-ru-classical,DIRECT
+
+  # --- Торренты ---
+  - RULE-SET,k4reon-torrent-domains,DIRECT
 
   # --- YouTube ---
   - RULE-SET,k4reon-youtube-domains,YouTube
@@ -253,9 +288,13 @@ rules:
   - RULE-SET,k4reon-discord-ip,Discord,no-resolve
   - RULE-SET,k4reon-discord-ports,Discord
 
-  # --- AI / Gemini / нейросети ---
+  # --- AI / Gemini / нейросети (до Google) ---
   - RULE-SET,k4reon-ai-domains,Ai
   - RULE-SET,k4reon-ai-ip,Ai,no-resolve
+
+  # --- Google поиск/сервисы (российский IP) ---
+  - RULE-SET,k4reon-google-domains,DIRECT
+  - RULE-SET,k4reon-google-ip,DIRECT,no-resolve
 
   # --- Мессенджеры ---
   - RULE-SET,k4reon-messengers-domains,Messengers
@@ -265,8 +304,13 @@ rules:
   - RULE-SET,k4reon-social-domains,Fast
   - RULE-SET,k4reon-social-ip,Fast,no-resolve
 
-  # --- Кастомные домены в прокси ---
+  # --- Кастомные домены ---
   - RULE-SET,k4reon-custom-proxy,PROXY
+  - RULE-SET,k4reon-custom-direct,DIRECT
+
+  # --- Россия по IP ---
+  - GEOIP,RU,DIRECT
+  - GEOIP,SU,DIRECT
 
   # --- Всё остальное ---
-  - MATCH,DIRECT
+  - MATCH,PROXY

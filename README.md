@@ -38,7 +38,7 @@
 ## Структура
 
 ```
-configs/     полные конфиги PROXY и DIRECT (можно использовать как есть)
+configs/     ssclash-go/ и ssclash-4/ — полные конфиги PROXY и DIRECT
 dist/        готовые k4reon-*.mrs и classical-*.txt
 rules/       исходные списки по категориям + denylist
 scripts/     merge.py — слияние и фильтрация
@@ -46,7 +46,7 @@ sources.json откуда брать публичные списки
 build.ps1 / build.sh
 ```
 
-`configs/*.yaml` — это полные конфиги в стиле SSClash-Go: tproxy,
+`configs/ssclash-go/*.yaml` — полные конфиги в стиле SSClash-Go: tproxy,
 DNS, sniffer, proxy-providers, группы `fallback`/`url-test`/`select`,
 rule-providers и rules. Их можно брать целиком, а не собирать по частям.
 
@@ -73,8 +73,22 @@ rule-providers и rules. Их можно брать целиком, а не со
 
 ## Полные конфиги
 
-- `configs/PROXY.yaml` — профиль `MATCH,PROXY`;
-- `configs/DIRECT.yaml` — профиль `MATCH,DIRECT`.
+- `configs/ssclash-go/PROXY.yaml` — полный `MATCH,PROXY` для SSClash-Go;
+- `configs/ssclash-go/DIRECT.yaml` — полный `MATCH,DIRECT` для SSClash-Go;
+- `configs/ssclash-4/PROXY.yaml` — полный `MATCH,PROXY` для SSClash 4;
+- `configs/ssclash-4/DIRECT.yaml` — полный `MATCH,DIRECT` для SSClash 4.
+
+Отличие SSClash 4 только в блоке контроллера и UI:
+
+```yaml
+external-controller: 0.0.0.0:9090
+external-ui: ./ui
+external-ui-url: "https://github.com/Zephyruso/zashboard/releases/latest/download/dist-cdn-fonts.zip"
+```
+
+В SSClash-Go остаётся `external-controller: 127.0.0.1:9090`, UI отдаёт
+сам SSClash. В SSClash 4 API доступен по сети — доступ стоит ограничить
+firewall или задать `secret`.
 
 Перед использованием заменить:
 
@@ -151,12 +165,14 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 ## Как использовать
 
 **Вариант 1 — полный конфиг.**
-Взять `configs/PROXY.yaml` или `configs/DIRECT.yaml`, заменить подписку
-и скопировать на роутер как `config.yaml` (или в профиль SSClash).
+Для SSClash-Go: `configs/ssclash-go/PROXY.yaml` или `DIRECT.yaml`.
+Для SSClash 4: `configs/ssclash-4/PROXY.yaml` или `DIRECT.yaml`.
+Заменить подписку и скопировать на роутер как `config.yaml`
+(или в профиль SSClash).
 
 **Вариант 2 — только правила.**
-Перенести блоки `rule-providers` и `rules` из `configs/PROXY.yaml`
-или `configs/DIRECT.yaml` в существующий конфиг.
+Перенести блоки `rule-providers` и `rules` из выбранного полного
+конфига в существующий конфиг.
 
 Если в конфиге уже есть anchors, строки можно сократить:
 
@@ -214,8 +230,10 @@ GitHub Actions пересобирает `dist/` на каждый пуш.
 Конфиги проверены на роутере:
 
 ```
-configs/PROXY.yaml   → test is successful
-configs/DIRECT.yaml  → test is successful
+configs/ssclash-go/PROXY.yaml   → test is successful
+configs/ssclash-go/DIRECT.yaml  → test is successful
+configs/ssclash-4/PROXY.yaml    → test is successful
+configs/ssclash-4/DIRECT.yaml   → test is successful
 ```
 
 ## Дисклеймер
