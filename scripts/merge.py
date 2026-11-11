@@ -212,8 +212,13 @@ def collect(group, cfg, kind):
     if not found:
         return 0
     out = os.path.join(BUILD, f"{group}-domains.txt" if kind == "domain" else f"{group}-ip.txt")
+    lines = sorted(found)
+    if kind == "domain":
+        # mihomo domain mrs: '+.' means suffix, plain means exact.
+        # All merged lists are category suffixes, so make them suffix rules.
+        lines = ["+." + x for x in lines]
     with open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(sorted(found)) + "\n")
+        f.write("\n".join(lines) + "\n")
     print(f"  [{group}] {kind}: {len(found)} -> {os.path.basename(out)}")
     return len(found)
 
