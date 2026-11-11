@@ -1,6 +1,20 @@
 # Custom domains that should stay DIRECT in the PROXY profile.
 # In the DIRECT profile they are not needed (MATCH,DIRECT).
+# IP / geo detection services: must show the real Russian WAN IP.
+DOMAIN-SUFFIX,2ip.io
 DOMAIN-SUFFIX,ip.sb
+DOMAIN-SUFFIX,ipify.org
+DOMAIN-SUFFIX,ipinfo.io
+DOMAIN-SUFFIX,ipapi.co
+DOMAIN-SUFFIX,ip-api.com
+DOMAIN-SUFFIX,ipwho.is
+DOMAIN-SUFFIX,ifconfig.me
+DOMAIN-SUFFIX,icanhazip.com
+DOMAIN-SUFFIX,myexternalip.com
+DOMAIN-SUFFIX,whatismyip.com
+DOMAIN-SUFFIX,checkip.amazonaws.com
+DOMAIN-SUFFIX,ip.me
+DOMAIN-SUFFIX,ipgrabber.ru
 DOMAIN-SUFFIX,hdreskan47.kinozo.cam
 DOMAIN-SUFFIX,k4reon.com
 DOMAIN-SUFFIX,tvtm.one
