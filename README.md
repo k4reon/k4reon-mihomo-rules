@@ -17,13 +17,6 @@
 | `k4reon-ru-domains.mrs` | ~1886 | v2fly `category-ru` (со всеми include) + перенесённый `ru-whitelist` |
 | `k4reon-ru-classical.txt` | 11 TLD | `ru`, `su`, `moscow`, `tatar`, `xn--*` |
 
-`ru-whitelist` с k4reon.com перенесён в `rules/ru/domains.txt` и больше
-не зависит от твоего сервера.
-
-Мусор отсекается в `rules/denylist.txt`: репаки, пиратки, ускорители,
-реклама. IP из доменных списков, `keyword`/`regexp`, `@ads`/`@cn`
-и дубликаты убираются автоматически.
-
 ## Структура
 
 ```
