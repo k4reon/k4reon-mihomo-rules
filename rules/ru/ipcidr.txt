@@ -1,0 +1,3 @@
+# RU IP ranges (empty by default).
+# ru-whitelist and category-ru are domain lists, so no CIDRs are needed.
+# Add stable RU CIDRs here if needed later.

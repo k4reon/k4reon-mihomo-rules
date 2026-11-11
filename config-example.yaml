@@ -1,10 +1,11 @@
 # ============================================================
-#  k4reon unified base for mihomo
+#  k4reon unified bases for mihomo
 #  Одна строка на провайдер, через anchors *domain / *ipcidr / *classical.
 #
-#  Эти 6 провайдеров ЗАМЕНЯЮТ:
-#    games@domain, games@ip, steam@domain, discord@domain
-#  (их можно удалить из конфига).
+#  Эти провайдеры ЗАМЕНЯЮТ:
+#    games@domain, games@ip, steam@domain,
+#    discord@domain,
+#    ru-whitelist, category-ru@domain
 #
 #  anchors уже есть:
 #    a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
@@ -19,8 +20,14 @@ rule-providers:
   k4reon-discord-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-domains.mrs }
   k4reon-discord-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ip.mrs }
   k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
+  k4reon-ru-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-domains.mrs }
+  k4reon-ru-classical: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-classical.txt }
 
 rules:
+  # --- RU напрямую (заменяет ru-whitelist + category-ru) ---
+  - RULE-SET,k4reon-ru-domains,DIRECT
+  - RULE-SET,k4reon-ru-classical,DIRECT
+
   # --- Games: k4reon unified ---
   - RULE-SET,k4reon-games-domains,Games
   - RULE-SET,k4reon-games-ip,Games

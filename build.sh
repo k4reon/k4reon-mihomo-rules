@@ -65,9 +65,11 @@ build_mrs domain "$BUILD/games-domains.txt"   "$DIST/k4reon-games-domains.mrs"
 build_mrs ipcidr "$BUILD/games-ip.txt"        "$DIST/k4reon-games-ip.mrs"
 build_mrs domain "$BUILD/discord-domains.txt" "$DIST/k4reon-discord-domains.mrs"
 build_mrs ipcidr "$BUILD/discord-ip.txt"      "$DIST/k4reon-discord-ip.mrs"
+build_mrs domain "$BUILD/ru-domains.txt"      "$DIST/k4reon-ru-domains.mrs"
 
-cp "$ROOT/rules/games/ports.txt"   "$DIST/k4reon-games-ports.txt"
-cp "$ROOT/rules/discord/ports.txt" "$DIST/k4reon-discord-ports.txt"
+cp "$ROOT/rules/games/ports.txt"    "$DIST/k4reon-games-ports.txt"
+cp "$ROOT/rules/discord/ports.txt"  "$DIST/k4reon-discord-ports.txt"
+cp "$ROOT/rules/ru/classical.txt"   "$DIST/k4reon-ru-classical.txt"
 
 echo
 echo "Built files:"

@@ -26,5 +26,13 @@
         "format": "v2fly"
       }
     ]
+  },
+  "ru": {
+    "domains": [
+      {
+        "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-ru",
+        "format": "v2fly"
+      }
+    ]
   }
 }

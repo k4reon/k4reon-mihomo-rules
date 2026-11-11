@@ -111,10 +111,14 @@ def parse_v2fly(text, depth=0, seen=None):
         line = line.strip()
         if not line or line.startswith("#") or line.startswith("//"):
             continue
-        # strip attributes: "domain @cn" -> "domain"
-        token = line.split()[0]
+        parts = line.split()
+        token = parts[0]
+        attrs = parts[1:]
+        # never merge ad / china-specific entries into these bases
+        if "@ads" in attrs or "@cn" in attrs:
+            continue
         if token.startswith("include:"):
-            if depth >= 3:
+            if depth >= 5:
                 continue
             name = token[len("include:"):]
             if name in seen:
@@ -194,7 +198,7 @@ def main():
     os.makedirs(BUILD, exist_ok=True)
     cfg = json.load(open(os.path.join(ROOT, "sources.json"), encoding="utf-8"))
     print("Merging sources:")
-    for group in ("games", "discord"):
+    for group in cfg.keys():
         collect_domains(group, cfg.get(group, {}))
 
     collect_cidrs(

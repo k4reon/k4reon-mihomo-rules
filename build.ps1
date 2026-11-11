@@ -56,12 +56,14 @@ $pairs = @(
     @('domain', (Join-Path $build 'games-domains.txt'),   (Join-Path $dist 'k4reon-games-domains.mrs')),
     @('ipcidr', (Join-Path $build 'games-ip.txt'),        (Join-Path $dist 'k4reon-games-ip.mrs')),
     @('domain', (Join-Path $build 'discord-domains.txt'), (Join-Path $dist 'k4reon-discord-domains.mrs')),
-    @('ipcidr', (Join-Path $build 'discord-ip.txt'),      (Join-Path $dist 'k4reon-discord-ip.mrs'))
+    @('ipcidr', (Join-Path $build 'discord-ip.txt'),      (Join-Path $dist 'k4reon-discord-ip.mrs')),
+    @('domain', (Join-Path $build 'ru-domains.txt'),      (Join-Path $dist 'k4reon-ru-domains.mrs'))
 )
 foreach ($p in $pairs) { Build-Mrs $p[0] $p[1] $p[2] }
 
-Copy-Item (Join-Path $root 'rules\games\ports.txt')   (Join-Path $dist 'k4reon-games-ports.txt')   -Force
-Copy-Item (Join-Path $root 'rules\discord\ports.txt') (Join-Path $dist 'k4reon-discord-ports.txt') -Force
+Copy-Item (Join-Path $root 'rules\games\ports.txt')    (Join-Path $dist 'k4reon-games-ports.txt')    -Force
+Copy-Item (Join-Path $root 'rules\discord\ports.txt')  (Join-Path $dist 'k4reon-discord-ports.txt')  -Force
+Copy-Item (Join-Path $root 'rules\ru\classical.txt')   (Join-Path $dist 'k4reon-ru-classical.txt')   -Force
 
 Write-Host ''
 Write-Host 'Built files:'
