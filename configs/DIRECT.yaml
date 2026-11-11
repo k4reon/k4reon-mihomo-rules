@@ -1,0 +1,197 @@
+# ============================================================
+#  mihomo — полный конфиг, профиль DIRECT (MATCH,DIRECT)
+#  Для домашнего роутера в России (tproxy).
+#
+#  Всё, что не совпало, идёт напрямую. В прокси уходят только
+#  YouTube, игры, Discord, AI, мессенджеры, соцсети и custom-proxy.
+#  Реклама блокируется.
+#
+#  Замени url подписки в proxy-providers.
+# ============================================================
+
+mode: rule
+tproxy-port: 7894
+udp: true
+endpoint-independent-nat: true
+ipv6: false
+log-level: info
+allow-lan: false
+
+geo-auto-update: true
+geo-update-interval: 24
+geox-url:
+  geoip: "https://github.com/MetaCubeX/meta-rules-dat/releases/latest/download/geoip.dat"
+  geosite: "https://github.com/MetaCubeX/meta-rules-dat/releases/latest/download/geosite.dat"
+
+profile:
+  store-selected: true
+
+experimental:
+  connection-pool: true
+  udp-fallback-match: true
+
+udp-timeout: 300
+routing-mark: 2
+
+unified-delay: true
+tcp-concurrent: true
+
+keep-alive-idle: 600
+keep-alive-interval: 30
+disable-keep-alive: false
+
+external-controller: 127.0.0.1:9090
+
+dns:
+  enable: true
+  listen: 127.0.0.1:7874
+  ipv6: false
+  cache-algorithm: arc
+  respect-rules: false
+
+  default-nameserver:
+    - 9.9.9.9
+    - 1.1.1.1
+
+  proxy-server-nameserver:
+    - 77.88.8.8
+    - 8.8.8.8
+
+  nameserver:
+    - 'https://dns.quad9.net/dns-query#PROXY'
+    - 'https://1.1.1.1/dns-query#PROXY'
+
+  nameserver-policy:
+    '+.lan': system
+    '+.local': system
+    '+.kion.ru': system
+    '+.wink.ru': system
+    'geosite:category-ru': [77.88.8.8, 77.88.8.1]
+    'rule-set:k4reon-ai-domains': 'https://1.1.1.1/dns-query#Ai'
+
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: false
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+    TLS:
+      ports: [443, 8443]
+  skip-domain:
+    - '+.lan'
+    - '+.local'
+    - '+.apple.com'
+    - '+.icloud.com'
+
+anchors:
+  a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
+  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200 }
+  a3: &classical { type: http, format: text, behavior: classical, interval: 43200 }
+
+proxy-providers:
+  main:
+    type: http
+    proxy: DIRECT
+    url: "https://example.com/your-subscription"
+    interval: 3600
+    path: ./providers/main.yaml
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 300
+      timeout: 2000
+      expected-status: 204
+      lazy: false
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [Fast, DIRECT]
+
+  - name: Fast
+    type: select
+    include-all: true
+
+  - name: YouTube
+    type: select
+    include-all: true
+    # filter: "(?i)(FI|SE|NL|DE|CZ)"
+
+  - name: Ai
+    type: select
+    include-all: true
+    # filter: "(?i)(HU|BG|PL|CZ|DE|AT|NL)"
+
+  - name: Discord
+    type: select
+    include-all: true
+
+  - name: Games
+    type: select
+    include-all: true
+    proxies: [DIRECT]
+
+  - name: Messengers
+    type: url-test
+    include-all: true
+    # filter: "^(?!.*(RU)).*$"
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    lazy: false
+
+  - name: GLOBAL
+    type: select
+    hidden: true
+    proxies: [PROXY, DIRECT]
+
+# ------------------------------------------------------------
+#  Только то, что должно идти в прокси (плюс REJECT рекламы).
+#  RU/private/torrent/google/GEOIP здесь не нужны: MATCH,DIRECT.
+# ------------------------------------------------------------
+rule-providers:
+  k4reon-ads-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ads-domains.mrs }
+  k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-domains.mrs }
+  k4reon-youtube-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-ip.mrs }
+  k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
+  k4reon-games-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ip.mrs }
+  k4reon-games-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ports.txt }
+  k4reon-discord-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-domains.mrs }
+  k4reon-discord-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ip.mrs }
+  k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
+  k4reon-ai-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-domains.mrs }
+  k4reon-ai-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-ip.mrs }
+  k4reon-messengers-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-domains.mrs }
+  k4reon-messengers-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-ip.mrs }
+  k4reon-social-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-domains.mrs }
+  k4reon-social-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-ip.mrs }
+  k4reon-custom-proxy: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-proxy.txt }
+
+rules:
+  - RULE-SET,k4reon-ads-domains,REJECT
+
+  - RULE-SET,k4reon-youtube-domains,YouTube
+  - RULE-SET,k4reon-youtube-ip,YouTube,no-resolve
+
+  - RULE-SET,k4reon-games-domains,Games
+  - AND,((NETWORK,UDP),(RULE-SET,k4reon-games-ip)),Games
+  - RULE-SET,k4reon-games-ports,Games
+
+  - RULE-SET,k4reon-discord-domains,Discord
+  - RULE-SET,k4reon-discord-ip,Discord,no-resolve
+  - RULE-SET,k4reon-discord-ports,Discord
+
+  - RULE-SET,k4reon-ai-domains,Ai
+  - RULE-SET,k4reon-ai-ip,Ai,no-resolve
+
+  - RULE-SET,k4reon-messengers-domains,Messengers
+  - RULE-SET,k4reon-messengers-ip,Messengers,no-resolve
+
+  - RULE-SET,k4reon-social-domains,Fast
+  - RULE-SET,k4reon-social-ip,Fast,no-resolve
+
+  - RULE-SET,k4reon-custom-proxy,PROXY
+
+  - MATCH,DIRECT
