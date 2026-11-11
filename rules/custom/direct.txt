@@ -21,6 +21,7 @@ DOMAIN-SUFFIX,ipgrabber.ru
 DOMAIN-SUFFIX,location.services.mozilla.com
 DOMAIN-SUFFIX,mozilla.map.fastly.net
 DOMAIN-SUFFIX,location.microsoft.com
+DOMAIN-SUFFIX,inference.location.live.net
 
 # Misc.
 DOMAIN-SUFFIX,hdreskan47.kinozo.cam
