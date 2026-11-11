@@ -245,6 +245,8 @@ rule-providers:
 rules:
   # --- Реклама ---
   - RULE-SET,k4reon-ads-domains,REJECT
+  # Custom override: must be before RU rules, otherwise DOMAIN-SUFFIX,ru wins
+  - RULE-SET,k4reon-custom-proxy,PROXY
 
   # --- YouTube ---
   - RULE-SET,k4reon-youtube-domains,YouTube
@@ -271,9 +273,6 @@ rules:
   # --- Соцсети ---
   - RULE-SET,k4reon-social-domains,Fast
   - RULE-SET,k4reon-social-ip,Fast,no-resolve
-
-  # --- Кастомные домены в прокси ---
-  - RULE-SET,k4reon-custom-proxy,PROXY
 
   # --- Всё остальное ---
   - MATCH,DIRECT
