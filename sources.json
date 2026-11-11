@@ -1,38 +1,95 @@
 {
-  "games": {
+  "private": {
     "domains": [
-      {
-        "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/games.list",
-        "format": "plain"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Game_Proxy.lsr",
-        "format": "loon"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-games-!cn",
-        "format": "v2fly"
-      }
+      { "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/private.list", "format": "plain" }
+    ],
+    "ipcidr": [
+      { "url": "https://cdn.jsdelivr.net/gh/hydraponique/roscomvpn-geoip/release/mihomo/private.mrs", "format": "mrs" }
     ]
   },
-  "discord": {
+  "ads": {
     "domains": [
-      {
-        "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Discord.lsr",
-        "format": "loon"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/discord",
-        "format": "v2fly"
-      }
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-ads-all", "format": "v2fly" }
     ]
   },
   "ru": {
     "domains": [
-      {
-        "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-ru",
-        "format": "v2fly"
-      }
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-ru", "format": "v2fly" }
+    ]
+  },
+  "torrent": {
+    "domains": [
+      { "url": "https://cdn.jsdelivr.net/gh/hydraponique/roscomvpn-geosite/release/mihomo/torrent.mrs", "format": "mrs" },
+      { "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/trackerslist.list", "format": "plain" }
+    ]
+  },
+  "youtube": {
+    "domains": [
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/youtube", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/YouTube.lsr", "format": "loon" }
+    ],
+    "ipcidr": [
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/YouTube.lsr", "format": "loon" }
+    ]
+  },
+  "ai": {
+    "domains": [
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-ai-!cn", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/AI_Rules.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Gemini.lsr", "format": "loon" }
+    ]
+  },
+  "google": {
+    "domains": [
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Google.lsr", "format": "loon" }
+    ],
+    "ipcidr": [
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Google.lsr", "format": "loon" }
+    ]
+  },
+  "discord": {
+    "domains": [
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Discord.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/discord", "format": "v2fly" }
+    ]
+  },
+  "messengers": {
+    "domains": [
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/telegram", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/whatsapp", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Telegram.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Whatsapp.lsr", "format": "loon" }
+    ],
+    "ipcidr": [
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Telegram.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Whatsapp.lsr", "format": "loon" },
+      { "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/telegramip.list", "format": "plain" }
+    ]
+  },
+  "social": {
+    "domains": [
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/instagram", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/threads", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/tiktok", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/facebook", "format": "v2fly" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Instagram.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Threads.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/TikTok.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Facebook.lsr", "format": "loon" }
+    ],
+    "ipcidr": [
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Facebook.lsr", "format": "loon" }
+    ]
+  },
+  "games": {
+    "domains": [
+      { "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/games.list", "format": "plain" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Game_Proxy.lsr", "format": "loon" },
+      { "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-games-!cn", "format": "v2fly" }
+    ],
+    "ipcidr": [
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Mihomo/Game_IP.mrs", "format": "mrs" }
     ]
   }
 }

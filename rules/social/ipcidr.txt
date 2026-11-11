@@ -1,0 +1,2 @@
+# Local social CIDRs (merged with Keviin Facebook.lsr).
+# Usually empty.

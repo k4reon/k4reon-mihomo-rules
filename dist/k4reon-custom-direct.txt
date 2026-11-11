@@ -1,0 +1,10 @@
+# Custom domains that should stay DIRECT in the PROXY profile.
+# In the DIRECT profile they are not needed (MATCH,DIRECT).
+DOMAIN-SUFFIX,ip.sb
+DOMAIN-SUFFIX,hdreskan47.kinozo.cam
+DOMAIN-SUFFIX,k4reon.com
+DOMAIN-SUFFIX,tvtm.one
+DOMAIN-SUFFIX,iptvx.one
+DOMAIN-SUFFIX,epg.team
+DOMAIN-SUFFIX,southwindairlines.com
+DOMAIN-SUFFIX,flightradar24.com

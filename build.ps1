@@ -30,43 +30,44 @@ if (-not (Test-Path $exe)) {
     Remove-Item $zip, $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# --- 2. upstream game IP list (Keviin Game_IP.mrs -> text) ---
-$gameIpUrl = 'https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Mihomo/Game_IP.mrs'
-$gameIpMrs = Join-Path $build 'upstream-game-ip.mrs'
-$gameIpTxt = Join-Path $build 'upstream-game-ip.txt'
-Write-Host 'Downloading upstream Game_IP.mrs...'
-Invoke-WebRequest $gameIpUrl -OutFile $gameIpMrs -UseBasicParsing
-& $exe convert-ruleset ipcidr mrs $gameIpMrs $gameIpTxt
-if ($LASTEXITCODE -ne 0) { throw 'failed to convert upstream Game_IP.mrs' }
+$env:MIHOMO_BIN = $exe
 
-# --- 3. merge public lists + local rules ---
+# --- 2. merge public lists + local rules ---
+Remove-Item "$dist\*" -Force -ErrorAction SilentlyContinue
+Remove-Item "$build\*-domains.txt","$build\*-ip.txt","$build\upstream-*" -Force -ErrorAction SilentlyContinue
 Write-Host 'Merging sources...'
 & python (Join-Path $root 'scripts\merge.py')
 if ($LASTEXITCODE -ne 0) { throw 'merge.py failed' }
 
-# --- 4. build mrs ---
+# --- 3. build mrs from every build/<group>-domains.txt / <group>-ip.txt ---
 function Build-Mrs([string]$behavior, [string]$src, [string]$dst) {
-    if (-not (Test-Path $src)) { throw "source not found: $src" }
+    if (-not (Test-Path $src)) { return }
     Write-Host "  $behavior  $(Split-Path -Leaf $src)  ->  $(Split-Path -Leaf $dst)"
     & $exe convert-ruleset $behavior text $src $dst
     if ($LASTEXITCODE -ne 0) { throw "convert-ruleset failed: $src" }
 }
 
-$pairs = @(
-    @('domain', (Join-Path $build 'games-domains.txt'),   (Join-Path $dist 'k4reon-games-domains.mrs')),
-    @('ipcidr', (Join-Path $build 'games-ip.txt'),        (Join-Path $dist 'k4reon-games-ip.mrs')),
-    @('domain', (Join-Path $build 'discord-domains.txt'), (Join-Path $dist 'k4reon-discord-domains.mrs')),
-    @('ipcidr', (Join-Path $build 'discord-ip.txt'),      (Join-Path $dist 'k4reon-discord-ip.mrs')),
-    @('domain', (Join-Path $build 'ru-domains.txt'),      (Join-Path $dist 'k4reon-ru-domains.mrs'))
-)
-foreach ($p in $pairs) { Build-Mrs $p[0] $p[1] $p[2] }
+Get-ChildItem $build -Filter '*-domains.txt' | ForEach-Object {
+    $g = $_.BaseName -replace '-domains$', ''
+    Build-Mrs 'domain' $_.FullName (Join-Path $dist "k4reon-$g-domains.mrs")
+}
+Get-ChildItem $build -Filter '*-ip.txt' | ForEach-Object {
+    $g = $_.BaseName -replace '-ip$', ''
+    Build-Mrs 'ipcidr' $_.FullName (Join-Path $dist "k4reon-$g-ip.mrs")
+}
 
-Copy-Item (Join-Path $root 'rules\games\ports.txt')    (Join-Path $dist 'k4reon-games-ports.txt')    -Force
-Copy-Item (Join-Path $root 'rules\discord\ports.txt')  (Join-Path $dist 'k4reon-discord-ports.txt')  -Force
-Copy-Item (Join-Path $root 'rules\ru\classical.txt')   (Join-Path $dist 'k4reon-ru-classical.txt')   -Force
+# --- 4. copy classical rule files (ports/classical/custom) ---
+Get-ChildItem (Join-Path $root 'rules') -Directory | ForEach-Object {
+    $group = $_.Name
+    Get-ChildItem $_.FullName -Filter '*.txt' | Where-Object {
+        $_.Name -notin @('domains.txt', 'ipcidr.txt')
+    } | ForEach-Object {
+        Copy-Item $_.FullName (Join-Path $dist "k4reon-$group-$($_.Name)") -Force
+    }
+}
 
 Write-Host ''
 Write-Host 'Built files:'
 Get-ChildItem $dist | Sort-Object Name | ForEach-Object {
-    '{0,-28} {1,8} bytes' -f $_.Name, $_.Length
+    '{0,-32} {1,8} bytes' -f $_.Name, $_.Length
 }

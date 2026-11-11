@@ -1,0 +1,16 @@
+# Explicit AI / Gemini / neural-network domains.
+# These are checked BEFORE google, so Gemini goes to Ai, not DIRECT.
+gemini.google.com
+bard.google.com
+ai.google.com
+aistudio.google.com
+makersuite.google.com
+generativelanguage.googleapis.com
+deepseek.com
+chatgpt.com
+chat.openai.com
+claude.ai
+copilot.microsoft.com
+perplexity.ai
+grok.com
+x.ai

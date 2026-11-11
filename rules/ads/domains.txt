@@ -1,0 +1,4 @@
+# Ads to reject explicitly (also covered by v2fly category-ads-all).
+appsflyersdk.com
+app-measurement.com
+adriver.ru

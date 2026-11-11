@@ -1,0 +1,2 @@
+# Local YouTube CIDRs (merged with Keviin YouTube.lsr).
+# Usually empty.

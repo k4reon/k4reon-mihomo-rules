@@ -1,0 +1,2 @@
+# Local torrent/tracker domains (merged with hydraponique torrent.mrs
+# and DustinWin trackerslist.list). Usually empty.

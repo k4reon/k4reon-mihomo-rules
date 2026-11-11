@@ -1,0 +1,2 @@
+# Local Google CIDRs (merged with Keviin Google.lsr).
+# Keep this small: full Google ranges include YouTube/AI/Discord Google Cloud.

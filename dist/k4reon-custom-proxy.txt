@@ -1,0 +1,4 @@
+# Custom domains that must go through PROXY in both profiles.
+DOMAIN-SUFFIX,100m3.ru
+DOMAIN-SUFFIX,spacesynth.ru
+DOMAIN-SUFFIX,tv.team

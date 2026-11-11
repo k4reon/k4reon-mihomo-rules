@@ -1,55 +1,61 @@
 #!/usr/bin/env python3
-"""Merge public game/discord rule lists with local k4reon additions.
+"""Merge public rule sources + local k4reon additions into build/*.
 
-Inputs:
-  sources.json
-  rules/<group>/domains.txt
-  rules/<group>/ipcidr.txt
-  build/upstream-game-ip.txt   (optional, produced by build scripts)
+sources.json schema:
+  "<group>": {
+    "domains": [ {"url": "...", "format": "plain|loon|v2fly|mrs"} ],
+    "ipcidr":  [ {"url": "...", "format": "plain|loon|mrs"} ]
+  }
 
-Outputs:
-  build/games-domains.txt
-  build/games-ip.txt
-  build/discord-domains.txt
-  build/discord-ip.txt
+Formats:
+  plain  - one domain/CIDR per line
+  loon   - DOMAIN, DOMAIN-SUFFIX, IP-CIDR, ...
+  v2fly  - v2fly domain lists (include:/full:/keyword:)
+  mrs    - mihomo binary rule-set; converted via $MIHOMO_BIN
 """
+import hashlib
 import ipaddress
 import json
 import os
 import re
+import subprocess
 import sys
+import time
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD = os.path.join(ROOT, "build")
-UA = {"User-Agent": "k4reon-mrs-build/1.0"}
+CACHE = os.path.join(BUILD, "cache")
+UA = {"User-Agent": "k4reon-mrs-build/1.1"}
 V2FLY_BASE = "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/"
 DOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9_-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9_-]*[a-z0-9])?)+$")
+MIHOMO = os.environ.get("MIHOMO_BIN", "")
 
 
 def load_denylist():
     path = os.path.join(ROOT, "rules", "denylist.txt")
     if not os.path.exists(path):
         return []
-    items = []
-    for line in open(path, encoding="utf-8"):
-        line = line.strip().lower()
-        if line and not line.startswith("#"):
-            items.append(line)
-    return items
+    return [l.strip().lower() for l in open(path, encoding="utf-8")
+            if l.strip() and not l.strip().startswith("#")]
 
 
 DENY = load_denylist()
 
 
-def fetch(url):
-    import time
+def fetch_bytes(url):
+    key = hashlib.sha1(url.encode()).hexdigest()
+    path = os.path.join(CACHE, key)
+    if os.path.exists(path) and time.time() - os.path.getmtime(path) < 6 * 3600:
+        return open(path, "rb").read()
     last = None
     for attempt in range(3):
         try:
             req = urllib.request.Request(url, headers=UA)
             with urllib.request.urlopen(req, timeout=60) as r:
-                return r.read().decode("utf-8", "replace")
+                data = r.read()
+            open(path, "wb").write(data)
+            return data
         except Exception as e:
             last = e
             if attempt < 2:
@@ -57,8 +63,12 @@ def fetch(url):
     raise last
 
 
-def normalize(domain):
-    d = domain.strip().lower().rstrip(".")
+def fetch_text(url):
+    return fetch_bytes(url).decode("utf-8", "replace")
+
+
+def normalize_domain(value, use_deny=False):
+    d = value.strip().lower().rstrip(".")
     if not d:
         return None
     if d.startswith("+."):
@@ -75,15 +85,25 @@ def normalize(domain):
         return None
     try:
         ipaddress.ip_address(d)
-        return None  # IP, not a domain
+        return None  # an IP, not a domain
     except ValueError:
         pass
-    if any(x in d for x in DENY):
+    if use_deny and any(x in d for x in DENY):
         return None
     return d
 
 
-def parse_plain(text):
+def normalize_cidr(value):
+    try:
+        net = ipaddress.ip_network(value.strip(), strict=False)
+    except ValueError:
+        return None
+    if net.version == 6:
+        return None  # ipv6: false in router config
+    return str(net)
+
+
+def parse_plain(text, kind):
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#") or line.startswith("//"):
@@ -91,18 +111,23 @@ def parse_plain(text):
         yield line
 
 
-def parse_loon(text):
+def parse_loon(text, kind):
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        if line.startswith("DOMAIN-SUFFIX,"):
-            yield line.split(",", 1)[1]
-        elif line.startswith("DOMAIN,"):
-            yield line.split(",", 1)[1]
-        elif line.startswith("DOMAIN-WILDCARD,"):
-            yield line.split(",", 1)[1].lstrip("*.")
-        # DOMAIN-KEYWORD / IP-CIDR / etc. are skipped
+        parts = line.split(",")
+        head = parts[0]
+        if kind == "domain":
+            if head in ("DOMAIN-SUFFIX", "DOMAIN") and len(parts) > 1:
+                yield parts[1]
+            elif head == "DOMAIN-WILDCARD" and len(parts) > 1:
+                yield parts[1].lstrip("*.")
+        else:
+            if head == "IP-CIDR" and len(parts) > 1:
+                yield parts[1]
+            elif head == "IP-CIDR6":
+                continue
 
 
 def parse_v2fly(text, depth=0, seen=None):
@@ -112,9 +137,7 @@ def parse_v2fly(text, depth=0, seen=None):
         if not line or line.startswith("#") or line.startswith("//"):
             continue
         parts = line.split()
-        token = parts[0]
-        attrs = parts[1:]
-        # never merge ad / china-specific entries into these bases
+        token, attrs = parts[0], parts[1:]
         if "@ads" in attrs or "@cn" in attrs:
             continue
         if token.startswith("include:"):
@@ -125,7 +148,7 @@ def parse_v2fly(text, depth=0, seen=None):
                 continue
             seen.add(name)
             try:
-                yield from parse_v2fly(fetch(V2FLY_BASE + name), depth + 1, seen)
+                yield from parse_v2fly(fetch_text(V2FLY_BASE + name), depth + 1, seen)
             except Exception as e:
                 print(f"  ! v2fly include {name}: {e}", file=sys.stderr)
             continue
@@ -137,81 +160,72 @@ def parse_v2fly(text, depth=0, seen=None):
             yield token
 
 
-def collect_domains(group, sources):
+def mrs_to_text(url, behavior):
+    if not MIHOMO:
+        raise RuntimeError("MIHOMO_BIN is not set; needed for mrs sources")
+    key = hashlib.sha1(f"{behavior}:{url}".encode()).hexdigest()
+    src = os.path.join(CACHE, key + ".mrs")
+    dst = os.path.join(CACHE, key + ".txt")
+    if not os.path.exists(dst):
+        if not os.path.exists(src):
+            open(src, "wb").write(fetch_bytes(url))
+        subprocess.run([MIHOMO, "convert-ruleset", behavior, "mrs", src, dst],
+                       check=True, capture_output=True)
+    return open(dst, encoding="utf-8").read()
+
+
+def collect(group, cfg, kind):
     found = set()
-    for src in sources.get("domains", []):
+    sources = cfg.get("domains" if kind == "domain" else "ipcidr", [])
+    for src in sources:
         url, fmt = src["url"], src["format"]
-        print(f"  [{group}] {fmt}: {url}")
+        print(f"  [{group}/{kind}] {fmt}: {url}")
         try:
-            text = fetch(url)
+            if fmt == "mrs":
+                text = mrs_to_text(url, kind)
+                items = parse_plain(text, kind)
+            else:
+                text = fetch_text(url)
+                if fmt == "plain":
+                    items = parse_plain(text, kind)
+                elif fmt == "loon":
+                    items = parse_loon(text, kind)
+                elif fmt == "v2fly":
+                    items = parse_v2fly(text)
+                else:
+                    print(f"  ! unknown format {fmt}", file=sys.stderr)
+                    continue
+            for item in items:
+                val = normalize_domain(item, use_deny=(group == "games")) if kind == "domain" else normalize_cidr(item)
+                if val:
+                    found.add(val)
         except Exception as e:
-            print(f"  ! failed: {e}", file=sys.stderr)
-            continue
-        if fmt == "plain":
-            items = parse_plain(text)
-        elif fmt == "loon":
-            items = parse_loon(text)
-        elif fmt == "v2fly":
-            items = parse_v2fly(text)
-        else:
-            print(f"  ! unknown format {fmt}", file=sys.stderr)
-            continue
-        for item in items:
-            d = normalize(item)
-            if d:
-                found.add(d)
+            print(f"  ! failed {url}: {e}", file=sys.stderr)
 
-    # local additions
-    local = os.path.join(ROOT, "rules", group, "domains.txt")
+    local = os.path.join(ROOT, "rules", group, "domains.txt" if kind == "domain" else "ipcidr.txt")
     if os.path.exists(local):
-        for item in parse_plain(open(local, encoding="utf-8").read()):
-            d = normalize(item)
-            if d:
-                found.add(d)
+        for item in parse_plain(open(local, encoding="utf-8").read(), kind):
+            val = normalize_domain(item, use_deny=False) if kind == "domain" else normalize_cidr(item)
+            if val:
+                found.add(val)
 
-    out = os.path.join(BUILD, f"{group}-domains.txt")
+    if not found:
+        return 0
+    out = os.path.join(BUILD, f"{group}-domains.txt" if kind == "domain" else f"{group}-ip.txt")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(sorted(found)) + "\n")
-    print(f"  [{group}] domains: {len(found)} -> {out}")
-
-
-def collect_cidrs(paths, out_path):
-    nets = set()
-    for path in paths:
-        if not path or not os.path.exists(path):
-            continue
-        for line in open(path, encoding="utf-8"):
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            try:
-                net = ipaddress.ip_network(line, strict=False)
-            except ValueError:
-                continue
-            nets.add(str(net))
-    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(sorted(nets)) + "\n")
-    print(f"  cidr: {len(nets)} -> {out_path}")
+    print(f"  [{group}] {kind}: {len(found)} -> {os.path.basename(out)}")
+    return len(found)
 
 
 def main():
-    os.makedirs(BUILD, exist_ok=True)
+    os.makedirs(CACHE, exist_ok=True)
     cfg = json.load(open(os.path.join(ROOT, "sources.json"), encoding="utf-8"))
     print("Merging sources:")
-    for group in cfg.keys():
-        collect_domains(group, cfg.get(group, {}))
-
-    collect_cidrs(
-        [
-            os.path.join(ROOT, "rules", "games", "ipcidr.txt"),
-            os.path.join(BUILD, "upstream-game-ip.txt"),
-        ],
-        os.path.join(BUILD, "games-ip.txt"),
-    )
-    collect_cidrs(
-        [os.path.join(ROOT, "rules", "discord", "ipcidr.txt")],
-        os.path.join(BUILD, "discord-ip.txt"),
-    )
+    for group, groupsrc in cfg.items():
+        collect(group, groupsrc, "domain")
+        collect(group, groupsrc, "ipcidr")
+    # custom group has only local classical rules; no merge
     print("Done.")
 
 

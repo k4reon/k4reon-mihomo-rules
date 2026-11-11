@@ -1,0 +1,87 @@
+# ============================================================
+#  k4reon — профиль PROXY (в конце MATCH,PROXY)
+#  Полная база: всё, что не должно идти в прокси, перечислено явно.
+#  Вставь rule-providers в секцию rule-providers, rules — в rules.
+# ============================================================
+
+rule-providers:
+  k4reon-private-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-private-domains.mrs }
+  k4reon-private-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-private-ip.mrs }
+  k4reon-ads-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ads-domains.mrs }
+  k4reon-ru-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-domains.mrs }
+  k4reon-ru-classical: { type: http, format: text, behavior: classical, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-classical.txt }
+  k4reon-torrent-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-torrent-domains.mrs }
+  k4reon-youtube-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-domains.mrs }
+  k4reon-youtube-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-ip.mrs }
+  k4reon-games-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
+  k4reon-games-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ip.mrs }
+  k4reon-games-ports: { type: http, format: text, behavior: classical, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ports.txt }
+  k4reon-discord-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-domains.mrs }
+  k4reon-discord-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ip.mrs }
+  k4reon-discord-ports: { type: http, format: text, behavior: classical, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
+  k4reon-ai-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-domains.mrs }
+  k4reon-ai-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-ip.mrs }
+  k4reon-google-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-google-domains.mrs }
+  k4reon-google-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-google-ip.mrs }
+  k4reon-messengers-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-domains.mrs }
+  k4reon-messengers-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-ip.mrs }
+  k4reon-social-domains: { type: http, format: mrs, behavior: domain, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-domains.mrs }
+  k4reon-social-ip: { type: http, format: mrs, behavior: ipcidr, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-ip.mrs }
+  k4reon-custom-proxy: { type: http, format: text, behavior: classical, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-proxy.txt }
+  k4reon-custom-direct: { type: http, format: text, behavior: classical, interval: 43200, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-direct.txt }
+
+rules:
+  # --- 1. Локальные сети ---
+  - RULE-SET,k4reon-private-domains,DIRECT
+  - RULE-SET,k4reon-private-ip,DIRECT,no-resolve
+
+  # --- 2. Реклама (до RU, иначе .ru перебьёт REJECT) ---
+  - RULE-SET,k4reon-ads-domains,REJECT
+
+  # --- 3. RU напрямую ---
+  - RULE-SET,k4reon-ru-domains,DIRECT
+  - RULE-SET,k4reon-ru-classical,DIRECT
+
+  # --- 4. Торренты ---
+  - RULE-SET,k4reon-torrent-domains,DIRECT
+
+  # --- 5. YouTube ---
+  - RULE-SET,k4reon-youtube-domains,YouTube
+  - RULE-SET,k4reon-youtube-ip,YouTube,no-resolve
+
+  # --- 6. Игры ---
+  - RULE-SET,k4reon-games-domains,Games
+  - AND,((NETWORK,UDP),(RULE-SET,k4reon-games-ip)),Games
+  - RULE-SET,k4reon-games-ports,Games
+
+  # --- 7. Discord ---
+  - RULE-SET,k4reon-discord-domains,Discord
+  - RULE-SET,k4reon-discord-ip,Discord,no-resolve
+  - RULE-SET,k4reon-discord-ports,Discord
+
+  # --- 8. AI / Gemini / нейронки (до Google!) ---
+  - RULE-SET,k4reon-ai-domains,Ai
+  - RULE-SET,k4reon-ai-ip,Ai,no-resolve
+
+  # --- 9. Google поиск/сервисы — DIRECT (RU-выдача) ---
+  - RULE-SET,k4reon-google-domains,DIRECT
+  - RULE-SET,k4reon-google-ip,DIRECT,no-resolve
+
+  # --- 10. Мессенджеры ---
+  - RULE-SET,k4reon-messengers-domains,Messengers
+  - RULE-SET,k4reon-messengers-ip,Messengers,no-resolve
+
+  # --- 11. Соцсети ---
+  - RULE-SET,k4reon-social-domains,Fast
+  - RULE-SET,k4reon-social-ip,Fast,no-resolve
+
+  # --- 12. Кастомные домены ---
+  - RULE-SET,k4reon-custom-proxy,PROXY
+  - RULE-SET,k4reon-custom-direct,DIRECT
+
+  # --- 13. Россия по IP ---
+  - GEOIP,RU,DIRECT
+  - GEOIP,SU,DIRECT
+
+  # --- 14. Всё остальное ---
+  - MATCH,PROXY

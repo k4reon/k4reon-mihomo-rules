@@ -1,0 +1,2 @@
+# Local private domains (merged with DustinWin private.list).
+# Usually empty; add LAN/private domains if needed.

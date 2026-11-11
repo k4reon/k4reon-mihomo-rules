@@ -44,32 +44,38 @@ if [ ! -x "$TOOLS/mihomo" ]; then
   chmod +x "$TOOLS/mihomo"
 fi
 
-# --- 2. upstream game IP list (Keviin Game_IP.mrs -> text) ---
-GAME_IP_URL="https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Mihomo/Game_IP.mrs"
-echo "Downloading upstream Game_IP.mrs..."
-curl -fL "$GAME_IP_URL" -o "$BUILD/upstream-game-ip.mrs"
-"$TOOLS/mihomo" convert-ruleset ipcidr mrs "$BUILD/upstream-game-ip.mrs" "$BUILD/upstream-game-ip.txt"
+export MIHOMO_BIN="$TOOLS/mihomo"
 
-# --- 3. merge public lists + local rules ---
+# --- 2. merge public lists + local rules ---
+rm -f "$DIST"/*
+rm -f "$BUILD"/*-domains.txt "$BUILD"/*-ip.txt "$BUILD"/upstream-*
 echo "Merging sources..."
 python3 "$ROOT/scripts/merge.py"
 
-# --- 4. build mrs ---
+# --- 3. build mrs ---
 build_mrs() {
   local behavior="$1" src="$2" dst="$3"
   echo "  $behavior  $(basename "$src")  ->  $(basename "$dst")"
   "$TOOLS/mihomo" convert-ruleset "$behavior" text "$src" "$dst"
 }
 
-build_mrs domain "$BUILD/games-domains.txt"   "$DIST/k4reon-games-domains.mrs"
-build_mrs ipcidr "$BUILD/games-ip.txt"        "$DIST/k4reon-games-ip.mrs"
-build_mrs domain "$BUILD/discord-domains.txt" "$DIST/k4reon-discord-domains.mrs"
-build_mrs ipcidr "$BUILD/discord-ip.txt"      "$DIST/k4reon-discord-ip.mrs"
-build_mrs domain "$BUILD/ru-domains.txt"      "$DIST/k4reon-ru-domains.mrs"
+for f in "$BUILD"/*-domains.txt; do
+  [ -e "$f" ] || continue
+  g="$(basename "$f" -domains.txt)"
+  build_mrs domain "$f" "$DIST/k4reon-$g-domains.mrs"
+done
+for f in "$BUILD"/*-ip.txt; do
+  [ -e "$f" ] || continue
+  g="$(basename "$f" -ip.txt)"
+  build_mrs ipcidr "$f" "$DIST/k4reon-$g-ip.mrs"
+done
 
-cp "$ROOT/rules/games/ports.txt"    "$DIST/k4reon-games-ports.txt"
-cp "$ROOT/rules/discord/ports.txt"  "$DIST/k4reon-discord-ports.txt"
-cp "$ROOT/rules/ru/classical.txt"   "$DIST/k4reon-ru-classical.txt"
+# --- 4. copy classical rule files ---
+find "$ROOT/rules" -mindepth 2 -maxdepth 2 -type f -name '*.txt' \
+  ! -name 'domains.txt' ! -name 'ipcidr.txt' | while read -r f; do
+    g="$(basename "$(dirname "$f")")"
+    cp "$f" "$DIST/k4reon-$g-$(basename "$f")"
+  done
 
 echo
 echo "Built files:"
