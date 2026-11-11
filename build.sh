@@ -51,7 +51,7 @@ build_mrs() {
 for g in games discord; do
   build_mrs domain "$ROOT/rules/$g/domains.txt" "$DIST/k4reon-$g-domains.mrs"
   build_mrs ipcidr "$ROOT/rules/$g/ipcidr.txt"  "$DIST/k4reon-$g-ip.mrs"
-  cp "$ROOT/rules/$g/ports.yaml" "$DIST/k4reon-$g-ports.yaml"
+  cp "$ROOT/rules/$g/ports.txt" "$DIST/k4reon-$g-ports.txt"
 done
 
 echo

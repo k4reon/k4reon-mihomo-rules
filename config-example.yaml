@@ -1,83 +1,29 @@
 # ============================================================
-#  Example: how to plug k4reon rule-sets into mihomo
-#  Place before GEOIP,RU and MATCH,PROXY.
+#  k4reon rule-sets for mihomo
+#  Стиль как в твоём config.yaml: одна строка на провайдер,
+#  через anchors *domain / *ipcidr / *classical.
+#
+#  anchor'ы уже есть в конфиге:
+#    a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
+#    a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200 }
+#    a3: &classical { type: http, format: text, behavior: classical, interval: 43200 }
 # ============================================================
 
 rule-providers:
-  # --- local files (copy dist/* into /opt/clash/local-rules/) ---
-  k4reon-games-domains:
-    type: file
-    behavior: domain
-    format: mrs
-    path: ./local-rules/k4reon-games-domains.mrs
-
-  k4reon-games-ip:
-    type: file
-    behavior: ipcidr
-    format: mrs
-    path: ./local-rules/k4reon-games-ip.mrs
-
-  k4reon-games-ports:
-    type: file
-    behavior: classical
-    format: yaml
-    path: ./local-rules/k4reon-games-ports.yaml
-
-  k4reon-discord-domains:
-    type: file
-    behavior: domain
-    format: mrs
-    path: ./local-rules/k4reon-discord-domains.mrs
-
-  k4reon-discord-ip:
-    type: file
-    behavior: ipcidr
-    format: mrs
-    path: ./local-rules/k4reon-discord-ip.mrs
-
-  k4reon-discord-ports:
-    type: file
-    behavior: classical
-    format: yaml
-    path: ./local-rules/k4reon-discord-ports.yaml
-
-  # --- via GitHub (replace USER/REPO) ---
-  # k4reon-games-domains:
-  #   type: http
-  #   behavior: domain
-  #   format: mrs
-  #   url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs
-  #   path: ./ruleset/k4reon-games-domains.mrs
-  #   interval: 86400
-  #
-  # k4reon-games-ip:
-  #   type: http
-  #   behavior: ipcidr
-  #   format: mrs
-  #   url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ip.mrs
-  #   path: ./ruleset/k4reon-games-ip.mrs
-  #   interval: 86400
-  #
-  # k4reon-games-ports:
-  #   type: http
-  #   behavior: classical
-  #   format: yaml
-  #   url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ports.yaml
-  #   path: ./ruleset/k4reon-games-ports.yaml
-  #   interval: 86400
+  k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
+  k4reon-games-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ip.mrs }
+  k4reon-games-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ports.txt }
+  k4reon-discord-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-domains.mrs }
+  k4reon-discord-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ip.mrs }
+  k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
 
 rules:
-  # ... existing rules ...
-
-  # --- Games: k4reon custom additions ---
+  # --- Games: k4reon ---
   - RULE-SET,k4reon-games-domains,Games
   - RULE-SET,k4reon-games-ip,Games
   - RULE-SET,k4reon-games-ports,Games
 
-  # --- Discord: k4reon custom additions ---
-  # (keep RULE-SET,discord@domain,Discord as well)
+  # --- Discord: k4reon ---
   - RULE-SET,k4reon-discord-domains,Discord
   - RULE-SET,k4reon-discord-ip,Discord
   - RULE-SET,k4reon-discord-ports,Discord
-
-  # ... IPTV / GEOIP / MATCH ...

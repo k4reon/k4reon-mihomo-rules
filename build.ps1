@@ -41,7 +41,7 @@ foreach ($g in $groups) {
     $srcDir = Join-Path $root "rules\$g"
     Build-Mrs 'domain' (Join-Path $srcDir 'domains.txt') (Join-Path $dist "k4reon-$g-domains.mrs")
     Build-Mrs 'ipcidr' (Join-Path $srcDir 'ipcidr.txt')  (Join-Path $dist "k4reon-$g-ip.mrs")
-    Copy-Item (Join-Path $srcDir 'ports.yaml') (Join-Path $dist "k4reon-$g-ports.yaml") -Force
+    Copy-Item (Join-Path $srcDir 'ports.txt') (Join-Path $dist "k4reon-$g-ports.txt") -Force
 }
 
 Write-Host ''
