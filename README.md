@@ -88,7 +88,7 @@ a3: &classical { type: http, format: text, behavior: classical, interval: 43200 
   - RULE-SET,k4reon-ru-domains,DIRECT
   - RULE-SET,k4reon-ru-classical,DIRECT
   - RULE-SET,k4reon-games-domains,Games
-  - RULE-SET,k4reon-games-ip,Games
+  - AND,((NETWORK,UDP),(RULE-SET,k4reon-games-ip)),Games
   - RULE-SET,k4reon-games-ports,Games
   - RULE-SET,k4reon-discord-domains,Discord
   - RULE-SET,k4reon-discord-ip,Discord

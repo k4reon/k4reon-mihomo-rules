@@ -30,7 +30,7 @@ rules:
 
   # --- Games: k4reon unified ---
   - RULE-SET,k4reon-games-domains,Games
-  - RULE-SET,k4reon-games-ip,Games
+  - AND,((NETWORK,UDP),(RULE-SET,k4reon-games-ip)),Games
   - RULE-SET,k4reon-games-ports,Games
 
   # --- Discord: k4reon unified ---

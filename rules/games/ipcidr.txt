@@ -12,6 +12,10 @@
 # Verified: 185.34.106.118, 185.34.107.128
 185.34.106.0/23
 
+# Extra ranges from the old config (UDP game traffic)
+185.40.232.0/22
+102.67.0.0/16
+
 # NOTE: PoE2 instance servers are hosted on shared UCLOUD ranges
 # (e.g. 134.168.255.0/24, Moscow). Do not add them as a broad CIDR -
 # use TCP port rules in ports.yaml instead.
