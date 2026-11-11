@@ -1,0 +1,16 @@
+payload:
+  # --- Path of Exile 2 (TCP only) ---
+  - AND,((NETWORK,TCP),(DST-PORT,6112))
+  - AND,((NETWORK,TCP),(DST-PORT,8095))
+  - AND,((NETWORK,TCP),(DST-PORT,12995))
+  - AND,((NETWORK,TCP),(DST-PORT,20481-21360))
+
+  # --- Destiny 2 (Bungie) ---
+  - AND,((NETWORK,UDP),(DST-PORT,3074))
+  - AND,((NETWORK,UDP),(DST-PORT,3075))
+  - AND,((NETWORK,UDP),(DST-PORT,3097-3196))
+  - AND,((NETWORK,TCP),(DST-PORT,7500-7509))
+  - AND,((NETWORK,TCP),(DST-PORT,30000-30009))
+
+  # --- Steam SDR (CS2, Dota 2, Destiny 2 on Steam) ---
+  - AND,((NETWORK,UDP),(DST-PORT,27015-27200))

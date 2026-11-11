@@ -1,0 +1,15 @@
+# ============================================================
+#  Custom game domains not covered by public rule sets
+#  behavior: domain  ->  dist/games-domains.mrs
+# ============================================================
+
+# Bungie / Destiny 2
+gravityshavings.net
+deadorbit.net
+bungie.net
+battleye.com
+
+# Path of Exile 2
+pathofexile2.com
+pathofexile.com
+poecdn.com

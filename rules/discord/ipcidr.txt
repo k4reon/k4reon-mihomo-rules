@@ -1,0 +1,11 @@
+# ============================================================
+#  Discord TURN / voice IP ranges
+#  behavior: ipcidr  ->  dist/discord-ip.mrs
+# ============================================================
+
+# i3D.net / Discord TURN ranges (covers 66.22.192.0 - 66.22.255.255)
+66.22.192.0/18
+
+# NOTE: Voice media via Cloudflare (104.29.0.0/16) is applied together
+# with DST-PORT 19294-19344 in ports.yaml, not as a bare CIDR here.
+# Go Live (35.217.0.0/16, Google Cloud) is covered by UDP 50000-65535.

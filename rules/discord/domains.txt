@@ -1,0 +1,27 @@
+# ============================================================
+#  Discord domains
+#  behavior: domain  ->  dist/discord-domains.mrs
+# ============================================================
+
+# Core
+discord.com
+discord.gg
+discordapp.com
+discordapp.net
+discord.media
+discordstatus.com
+discordactivities.com
+discordsays.com
+
+# Short links / store / tools
+dis.gd
+discord.co
+discord.dev
+discord.design
+discord.gift
+discord.gifts
+discord.new
+discord.store
+discord.tools
+discordmerch.com
+discordpartygames.com

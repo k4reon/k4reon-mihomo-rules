@@ -1,0 +1,17 @@
+# ============================================================
+#  Stable game IP ranges
+#  behavior: ipcidr  ->  dist/games-ip.mrs
+# ============================================================
+
+# Bungie Inc. (AS394073) - Destiny 2 game servers
+# Verified: 172.97.56.46, 205.209.23.4, 205.209.19.85
+172.97.0.0/16
+205.209.0.0/16
+
+# Demonware Limited (AS60229) - Call of Duty / Demonware
+# Verified: 185.34.106.118, 185.34.107.128
+185.34.106.0/23
+
+# NOTE: PoE2 instance servers are hosted on shared UCLOUD ranges
+# (e.g. 134.168.255.0/24, Moscow). Do not add them as a broad CIDR -
+# use TCP port rules in ports.yaml instead.
