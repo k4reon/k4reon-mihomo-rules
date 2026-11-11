@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Build custom mihomo rule-sets (mrs + classical yaml).
+# Build k4reon mihomo rule-sets: merge public sources + local additions.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 TOOLS="$ROOT/.tools"
+BUILD="$ROOT/build"
 DIST="$ROOT/dist"
-mkdir -p "$TOOLS" "$DIST"
+mkdir -p "$TOOLS" "$BUILD" "$DIST"
 
+# --- 1. mihomo ---
 if [ ! -x "$TOOLS/mihomo" ]; then
   echo "Downloading latest mihomo for $(uname -s)/$(uname -m)..."
   URL="$(curl -fsSL https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
@@ -42,17 +44,30 @@ if [ ! -x "$TOOLS/mihomo" ]; then
   chmod +x "$TOOLS/mihomo"
 fi
 
+# --- 2. upstream game IP list (Keviin Game_IP.mrs -> text) ---
+GAME_IP_URL="https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Mihomo/Game_IP.mrs"
+echo "Downloading upstream Game_IP.mrs..."
+curl -fL "$GAME_IP_URL" -o "$BUILD/upstream-game-ip.mrs"
+"$TOOLS/mihomo" convert-ruleset ipcidr mrs "$BUILD/upstream-game-ip.mrs" "$BUILD/upstream-game-ip.txt"
+
+# --- 3. merge public lists + local rules ---
+echo "Merging sources..."
+python3 "$ROOT/scripts/merge.py"
+
+# --- 4. build mrs ---
 build_mrs() {
   local behavior="$1" src="$2" dst="$3"
   echo "  $behavior  $(basename "$src")  ->  $(basename "$dst")"
   "$TOOLS/mihomo" convert-ruleset "$behavior" text "$src" "$dst"
 }
 
-for g in games discord; do
-  build_mrs domain "$ROOT/rules/$g/domains.txt" "$DIST/k4reon-$g-domains.mrs"
-  build_mrs ipcidr "$ROOT/rules/$g/ipcidr.txt"  "$DIST/k4reon-$g-ip.mrs"
-  cp "$ROOT/rules/$g/ports.txt" "$DIST/k4reon-$g-ports.txt"
-done
+build_mrs domain "$BUILD/games-domains.txt"   "$DIST/k4reon-games-domains.mrs"
+build_mrs ipcidr "$BUILD/games-ip.txt"        "$DIST/k4reon-games-ip.mrs"
+build_mrs domain "$BUILD/discord-domains.txt" "$DIST/k4reon-discord-domains.mrs"
+build_mrs ipcidr "$BUILD/discord-ip.txt"      "$DIST/k4reon-discord-ip.mrs"
+
+cp "$ROOT/rules/games/ports.txt"   "$DIST/k4reon-games-ports.txt"
+cp "$ROOT/rules/discord/ports.txt" "$DIST/k4reon-discord-ports.txt"
 
 echo
 echo "Built files:"

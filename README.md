@@ -1,78 +1,77 @@
-# MRS-MIHOMO — k4reon rules for mihomo (games + discord)
+# MRS-MIHOMO — k4reon unified base (games + discord)
 
-Кастомные правила Mihomo для игр и Discord. Все файлы и rule-provider'ы
-имеют префикс `k4reon-`.
+Своя база правил Mihomo: публичные списки от разных авторов **сливаются
+в один набор** и дополняются нашими находками. В конфиге остаётся
+6 провайдеров вместо десятка.
 
-Дополняет готовые наборы (DustinWin `games.mrs`, Keviin560 `Discord.mrs`)
-тем, чего в публичных наборах нет:
+## Что внутри
 
-- Bungie / Destiny 2: `gravityshavings.net`, `deadorbit.net`, `bungie.net`
-- Path of Exile 2: `pathofexile2.com`, `pathofexile.com`, `poecdn.com`
-- Игровые порты PoE2 / Destiny 2 / Steam SDR
-- Discord Go Live: UDP `50000-65535`
-- Discord TURN: `66.22.192.0/18`
+| Набор | Доменов / CIDR | Источники |
+|---|---|---|
+| `k4reon-games-domains.mrs` | ~944 | DustinWin `games.list`, Keviin560 `Game_Proxy`, v2fly `category-games-!cn` + наши домены |
+| `k4reon-games-ip.mrs` | 61 CIDR | Keviin560 `Game_IP` + наши Bungie/Demonware диапазоны |
+| `k4reon-games-ports.txt` | 10 правил | PoE2 / Destiny 2 / Steam SDR |
+| `k4reon-discord-domains.mrs` | 29 | Keviin560 `Discord`, v2fly `discord` + наши |
+| `k4reon-discord-ip.mrs` | 1 CIDR | `66.22.192.0/18` (Discord TURN) |
+| `k4reon-discord-ports.txt` | 2 правила | голос `19294-19344`, Go Live `50000-65535` |
+
+Мусор отсекается в `rules/denylist.txt`: репаки, пиратки, ускорители,
+реклама. IP из доменных списков, `keyword`/`regexp` и дубликаты
+убираются автоматически.
 
 ## Структура
 
 ```
 MRS-MIHOMO/
+├─ sources.json           # откуда брать публичные списки
+├─ scripts/merge.py       # слияние + фильтрация + дедупликация
 ├─ rules/
 │  ├─ games/
-│  │  ├─ domains.txt      # домены (behavior: domain)
-│  │  ├─ ipcidr.txt       # CIDR (behavior: ipcidr)
-│  │  └─ ports.txt        # порты/AND (behavior: classical, format: text)
-│  └─ discord/
-│     ├─ domains.txt
-│     ├─ ipcidr.txt
-│     └─ ports.txt
-├─ dist/                  # собранные файлы
-│  ├─ k4reon-games-domains.mrs
-│  ├─ k4reon-games-ip.mrs
-│  ├─ k4reon-games-ports.txt
-│  ├─ k4reon-discord-domains.mrs
-│  ├─ k4reon-discord-ip.mrs
-│  └─ k4reon-discord-ports.txt
-├─ build.ps1              # сборка на Windows
-├─ build.sh               # сборка на Linux/macOS
-├─ config-example.yaml    # пример в стиле твоего конфига (anchors)
+│  │  ├─ domains.txt      # наши дополнения
+│  │  ├─ ipcidr.txt       # наши CIDR
+│  │  └─ ports.txt        # порты (classical text)
+│  ├─ discord/
+│  │  ├─ domains.txt
+│  │  ├─ ipcidr.txt
+│  │  └─ ports.txt
+│  └─ denylist.txt        # что выкидывать
+├─ build/                 # промежуточные слитые списки (не коммитится)
+├─ dist/                  # готовые mrs/txt (коммитится)
+├─ build.ps1 / build.sh
+├─ config-example.yaml
 └─ .github/workflows/build.yml
 ```
 
-## Важно про формат mrs
-
-`mrs` поддерживает только `behavior: domain` и `behavior: ipcidr`.
-Порты (`DST-PORT`), `AND` и прочие составные правила в `mrs` не помещаются —
-они лежат в `ports.txt` и подключаются как `behavior: classical`,
-`format: text` (anchor `*classical`, как в твоём конфиге).
-
 ## Сборка
-
-Windows:
 
 ```powershell
 .\build.ps1
 ```
 
-Linux/macOS:
+или:
 
 ```bash
 ./build.sh
 ```
 
-Скрипт сам скачивает Mihomo в `.tools/` и собирает `dist/`.
+Скрипт:
+1. скачивает Mihomo;
+2. скачивает `Game_IP.mrs` и конвертирует в текст;
+3. запускает `merge.py` — тянет все источники из `sources.json`,
+   добавляет локальные правила, фильтрует и дедуплицирует;
+4. собирает `dist/*.mrs` и копирует `ports.txt`.
 
-## Подключение (как в твоём config.yaml)
+## Подключение (стиль твоего config.yaml)
 
-У тебя уже есть anchors:
+Anchors уже есть:
 
 ```yaml
-anchors:
-  a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
-  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200 }
-  a3: &classical { type: http, format: text, behavior: classical, interval: 43200 }
+a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
+a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200 }
+a3: &classical { type: http, format: text, behavior: classical, interval: 43200 }
 ```
 
-Тогда `rule-providers` — по одной строке на провайдер, без `path` и `interval`:
+`rule-providers`:
 
 ```yaml
   k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
@@ -83,7 +82,7 @@ anchors:
   k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
 ```
 
-И в `rules` — до `GEOIP,RU` и `MATCH,PROXY`:
+`rules`:
 
 ```yaml
   - RULE-SET,k4reon-games-domains,Games
@@ -94,37 +93,42 @@ anchors:
   - RULE-SET,k4reon-discord-ports,Discord
 ```
 
-Если нужны локальные файлы вместо HTTP:
+**Что можно удалить из конфига**, чтобы стало меньше правил:
 
 ```yaml
-  k4reon-games-domains: { type: file, format: mrs, behavior: domain, path: ./local-rules/k4reon-games-domains.mrs }
-  k4reon-games-ports: { type: file, format: text, behavior: classical, path: ./local-rules/k4reon-games-ports.txt }
+  # удалить — уже внутри k4reon-*:
+  games@domain
+  games@ip
+  steam@domain
+  discord@domain
 ```
 
-## Что покрыто готовыми наборами
+Остальные провайдеры (`google`, `youtube`, `telegram`, `ai`, `private`,
+`torrent`, `ru-whitelist` и т.д.) не трогаем — они не про игры.
 
-- CoD / Demonware / Activision / BattlEye — `DustinWin games.mrs`
-- Steam / Steam SDR — `DustinWin games.mrs` + `games@ip`
-- Discord-домены — `Keviin560 Discord.mrs`
-- Discord TURN `66.22.192.0/18` — стандартный диапазон
+## Как добавить нового автора
 
-В репозиторий вынесено только то, чего там нет. Дублирование не вредно.
+Открой `sources.json` и добавь URL + формат:
 
-## Как добавлять новое
-
-1. Домен — строка в `rules/games/domains.txt`.
-2. Подсеть — CIDR в `rules/games/ipcidr.txt`.
-3. Порт/составное правило — строка в `rules/games/ports.txt`
-   без цели (цель задаёт `RULE-SET`).
-4. Пересобрать: `./build.ps1` или `./build.sh`.
-5. Закоммитить `dist/` (или дать GitHub Actions собрать автоматически).
-
-## Проверка после применения
-
-В `/connections`:
-
+```json
+{ "url": "https://raw.githubusercontent.com/AUTHOR/REPO/main/games.list", "format": "plain" }
 ```
-rule    = RuleSet / DomainSuffix / And
-payload = k4reon-games-domains / k4reon-games-ports
-chains  = Games / <выбранный сервер>
+
+Поддерживаемые форматы:
+
+- `plain` — по одному домену в строке;
+- `loon` — `DOMAIN,` / `DOMAIN-SUFFIX,`;
+- `v2fly` — списки с `include:`, `full:`, `keyword:`.
+
+После этого — `./build.ps1` и коммит `dist/`.
+
+## Проверка
+
+```bash
+clash -t -d /tmp/k4reon-test -f test.yaml
 ```
+
+Уже проверено на роутере: `test is successful`.
+В `/connections` игровые строки должны иметь
+`payload = k4reon-games-domains / k4reon-games-ports`,
+`chains = Games / <сервер>`.

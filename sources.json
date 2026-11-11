@@ -1,0 +1,30 @@
+{
+  "games": {
+    "domains": [
+      {
+        "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/games.list",
+        "format": "plain"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Game_Proxy.lsr",
+        "format": "loon"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-games-!cn",
+        "format": "v2fly"
+      }
+    ]
+  },
+  "discord": {
+    "domains": [
+      {
+        "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Loon/Discord.lsr",
+        "format": "loon"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/discord",
+        "format": "v2fly"
+      }
+    ]
+  }
+}

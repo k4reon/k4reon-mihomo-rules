@@ -1,0 +1,17 @@
+# Substrings to exclude from merged game lists.
+# Piracy / repacks / game accelerators / launchers-ads.
+fitgirl-repacks
+dodi-repacks
+steamunlocked
+game-repack
+repack-games
+jiasu
+bohejiasuqi
+3dmjiasu
+ggkuai
+golink
+funjsq
+biubiu
+watt-toolkit
+steampp
+steamcommunity-302

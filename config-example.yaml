@@ -1,9 +1,12 @@
 # ============================================================
-#  k4reon rule-sets for mihomo
-#  Стиль как в твоём config.yaml: одна строка на провайдер,
-#  через anchors *domain / *ipcidr / *classical.
+#  k4reon unified base for mihomo
+#  Одна строка на провайдер, через anchors *domain / *ipcidr / *classical.
 #
-#  anchor'ы уже есть в конфиге:
+#  Эти 6 провайдеров ЗАМЕНЯЮТ:
+#    games@domain, games@ip, steam@domain, discord@domain
+#  (их можно удалить из конфига).
+#
+#  anchors уже есть:
 #    a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
 #    a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200 }
 #    a3: &classical { type: http, format: text, behavior: classical, interval: 43200 }
@@ -18,12 +21,12 @@ rule-providers:
   k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
 
 rules:
-  # --- Games: k4reon ---
+  # --- Games: k4reon unified ---
   - RULE-SET,k4reon-games-domains,Games
   - RULE-SET,k4reon-games-ip,Games
   - RULE-SET,k4reon-games-ports,Games
 
-  # --- Discord: k4reon ---
+  # --- Discord: k4reon unified ---
   - RULE-SET,k4reon-discord-domains,Discord
   - RULE-SET,k4reon-discord-ip,Discord
   - RULE-SET,k4reon-discord-ports,Discord
