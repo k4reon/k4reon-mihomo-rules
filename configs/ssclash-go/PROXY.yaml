@@ -274,6 +274,14 @@ rules:
 
   # --- Реклама ---
   - RULE-SET,k4reon-ads-domains,REJECT
+
+  # --- Исключения устройств (примеры: раскомментировать и указать свои IP) ---
+  # SRC-IP-CIDR — трафик ОТ устройства, IP-CIDR — трафик К устройству.
+  # Стоят после рекламы, но до сервисных правил, иначе YouTube/Discord/AI
+  # перехватят трафик этого устройства.
+  #- SRC-IP-CIDR,192.168.21.203/32,DIRECT # от устройства
+  #- IP-CIDR,192.168.21.121/32,DIRECT # к устройству
+
   # Custom override: must be before RU rules, otherwise DOMAIN-SUFFIX,ru wins
   - RULE-SET,k4reon-custom-proxy,PROXY
 
