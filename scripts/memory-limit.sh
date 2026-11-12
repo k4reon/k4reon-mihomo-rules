@@ -242,7 +242,7 @@ if [ "$DRY_RUN" -eq 1 ] || [ "$ASSUME_YES" -eq 1 ] || [ "$EXPLICIT" -ge 2 ]; the
 fi
 
 if [ ! -t 0 ]; then
-    say "SSClash: настройка памяти"
+    say "SSClash: настройка памяти ОЗУ"
     say "Вариант:      $KIND"
     say "ОЗУ роутера:  $MEM_MB MiB"
     say "Рекомендуется: GOGC=$GOGC_VALUE, GOMEMLIMIT=$GOMEMLIMIT_VALUE"
@@ -256,7 +256,7 @@ fi
 # ---- интерактивное меню ---------------------------------------
 
 say "========================================"
-say " SSClash: настройка памяти"
+say " SSClash: настройка памяти ОЗУ"
 say "========================================"
 say " Вариант:      $KIND"
 say " init:         $INIT"

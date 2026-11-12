@@ -506,7 +506,7 @@ wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rul
 
 ```
 ========================================
- SSClash: настройка памяти
+ SSClash: настройка памяти ОЗУ
 ========================================
  Вариант:      SSClash-Go
  init:         /etc/init.d/ssclash
