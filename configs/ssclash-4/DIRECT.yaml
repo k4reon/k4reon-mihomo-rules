@@ -257,8 +257,8 @@ rules:
   # Это исключение из ПРОКСИРОВАНИЯ: DNS и блокировка рекламы mihomo работают.
   # В SSClash 4 отдельного BYPASS_SOURCES нет: эти правила убирают проксирование,
   # а полный обход (tproxy + DNS) настраивается вручную через firewall.
-  #- SRC-IP-CIDR,192.168.21.203/32,DIRECT # от устройства
-  #- IP-CIDR,192.168.21.121/32,DIRECT # к устройству
+  #- SRC-IP-CIDR,IP устройства/32,DIRECT # от устройства
+  #- IP-CIDR,IP устройства/32,DIRECT # к устройству
 
   # Custom override: must be before RU rules, otherwise DOMAIN-SUFFIX,ru wins
   - RULE-SET,k4reon-custom-proxy,PROXY
