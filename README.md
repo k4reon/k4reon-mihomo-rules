@@ -76,7 +76,7 @@ build.ps1 / build.sh
 ```
 
 Памятки: `docs/ssclash-notion.md` — настройка SSClash-Go/4, `docs/ssclash-remove.md` —
-полное удаление SSClash-Go (OpenWrt/Keenetic) и SSClash legacy (OpenWrt).
+полное удаление SSClash-Go и SSClash legacy (OpenWrt).
 
 `configs/ssclash-go/*.yaml` — полные конфиги в стиле SSClash-Go: tproxy,
 DNS, sniffer, proxy-providers, группы `fallback`/`url-test`/`select`,
@@ -547,7 +547,6 @@ sh /tmp/memory-limit.sh --restore    # откатить
 - обновление SSClash-Go заменяет `/etc/init.d/ssclash` — после обновления
   настройку нужно применить заново (скрипт можно запускать повторно);
 - перезапуск службы кратко прерывает соединения;
-- скрипт только для OpenWrt: на Keenetic другой init-скрипт;
 - идея и базовая реализация — [F5GO-Mihomo-stuff](https://github.com/F5GO/F5GO-Mihomo-stuff) (MIT).
 
 ## Дисклеймер

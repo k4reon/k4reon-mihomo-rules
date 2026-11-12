@@ -18,7 +18,7 @@
 #    sh memory-limit.sh --dry-run        # показать diff, ничего не менять
 #    sh memory-limit.sh --restore        # вернуть исходный init-скрипт
 #
-#  Только OpenWrt: на Keenetic другой init-скрипт.
+#  Только OpenWrt (procd).
 #  GOMEMLIMIT — мягкий лимит: он не ограничивает RSS жёстко.
 # ============================================================
 

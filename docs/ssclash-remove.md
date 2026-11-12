@@ -18,15 +18,6 @@ rm -f /etc/init.d/ssclash
 rm -rf /opt/clash
 ```
 
-## SSClash-Go — Keenetic (Entware)
-
-```sh
-/opt/etc/init.d/S99ssclash stop
-rm -f /opt/etc/init.d/S99ssclash
-rm -f /opt/etc/ndm/netfilter.d/50-ssclash.sh
-rm -rf /opt/clash
-```
-
 ## SSClash (legacy, LuCI) — OpenWrt
 
 ```sh
@@ -44,8 +35,7 @@ rm -rf /opt/clash
 - `rm -rf /opt/clash` удаляет конфиги, подписки, кэш правил и секрет API.
   Если что-то нужно сохранить — сделайте копию заранее;
 - перезагрузка не обязательна, но полезна, чтобы сбросить остатки
-  firewall-правил, ip rule и маршрутизации;
-- SSClash (legacy) на Keenetic не ставится — это LuCI-пакет для OpenWrt.
+  firewall-правил, ip rule и маршрутизации.
 
 Источники:
 
