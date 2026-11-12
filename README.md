@@ -2,7 +2,7 @@
   <img src="docs/images/ssclash-logo.png" alt="SSClash — Super Simple Clash" width="180">
 </p>
 
-# mihomo rules for Russian home routers
+# mihomo rules ru for ssclash
 
 [![build-mrs](https://github.com/k4reon/mihomo-rules-ru/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/k4reon/mihomo-rules-ru/actions/workflows/build.yml)
 
