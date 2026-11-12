@@ -1,32 +1,28 @@
 #!/bin/sh
 # ============================================================
-#  SSClash-Go memory tuning for OpenWrt (procd)
+#  SSClash memory tuning for OpenWrt (procd)
 #
-#  Добавляет Go-рантайму SSClash переменные:
+#  Поддерживает два варианта:
+#    - SSClash-Go  -> /etc/init.d/ssclash  (env SSCLASH_ROOT)
+#    - SSClash 4   -> /etc/init.d/clash    (LuCI-приложение)
+#
+#  Добавляет Go-рантайму переменные:
 #    GOGC       — как часто запускать сборщик мусора (по умолчанию 100)
 #    GOMEMLIMIT — мягкий лимит памяти Go
 #
-#  Идея: F5GO-Mihomo-stuff (MIT)
-#  https://github.com/F5GO/F5GO-Mihomo-stuff
-#
-#  Запуск (обычно без аргументов — дальше скрипт спрашивает):
+#  Запуск (дальше скрипт спросит):
 #    sh memory-limit.sh
 #
-#  Неинтерактивные варианты:
-#    sh memory-limit.sh --yes            # применить рекомендуемые
-#    sh memory-limit.sh 50 96MiB         # свои значения
-#    sh memory-limit.sh --dry-run        # показать diff, ничего не менять
-#    sh memory-limit.sh --restore        # вернуть исходный init-скрипт
+#  Без вопросов:
+#    sh memory-limit.sh --yes
+#    sh memory-limit.sh 50 96MiB
+#    sh memory-limit.sh --dry-run
+#    sh memory-limit.sh --restore
 #
-#  Только OpenWrt (procd).
-#  GOMEMLIMIT — мягкий лимит: он не ограничивает RSS жёстко.
+#  Только OpenWrt (procd). GOMEMLIMIT — мягкий лимит, не жёсткий RSS.
 # ============================================================
 
 set -u
-
-INIT="${SSCLASH_INIT:-/etc/init.d/ssclash}"
-BACKUP="$INIT.bak"
-TMP="$(mktemp 2>/dev/null || echo "/tmp/ssclash-mem.$$")"
 
 DRY_RUN=0
 RESTORE=0
@@ -34,9 +30,12 @@ ASSUME_YES=0
 EXPLICIT=0
 GOGC_VALUE=""
 GOMEMLIMIT_VALUE=""
+KIND=""
+INIT=""
+BACKUP=""
+TMP="$(mktemp 2>/dev/null || echo "/tmp/ssclash-mem.$$")"
 
 say() { printf '%s\n' "$*"; }
-warn() { printf 'ВНИМАНИЕ: %s\n' "$*"; }
 die() { printf 'ОШИБКА: %s\n' "$*"; exit 1; }
 
 for arg in "$@"; do
@@ -60,12 +59,36 @@ for arg in "$@"; do
     esac
 done
 
-[ -f "$INIT" ] || die "не найден $INIT. Скрипт для OpenWrt с установленным SSClash-Go."
-grep -q 'SSCLASH_ROOT' "$INIT" || die "$INIT не похож на init-скрипт SSClash-Go."
+# ---- определяем вариант SSClash ---------------------------------
+CANDIDATE="${SSCLASH_INIT:-}"
+if [ -n "$CANDIDATE" ]; then
+    [ -f "$CANDIDATE" ] || die "не найден $CANDIDATE"
+else
+    if [ -f /etc/init.d/ssclash ]; then
+        CANDIDATE=/etc/init.d/ssclash
+    elif [ -f /etc/init.d/clash ]; then
+        CANDIDATE=/etc/init.d/clash
+    else
+        die "не найден init-скрипт SSClash (/etc/init.d/ssclash или /etc/init.d/clash)."
+    fi
+fi
 
+INIT="$CANDIDATE"
+BACKUP="$INIT.bak"
+
+if grep -q 'SSCLASH_ROOT' "$INIT"; then
+    KIND="SSClash-Go"
+    ANCHOR="procd_set_param env SSCLASH_ROOT"
+elif grep -q 'procd_set_param command' "$INIT"; then
+    KIND="SSClash 4"
+    ANCHOR="procd_set_param command"
+else
+    die "$INIT не похож на init-скрипт SSClash."
+fi
+
+# ---- значения ----------------------------------------------------
 MEM_KB="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null)"
 MEM_MB=$(( ${MEM_KB:-0} / 1024 ))
-[ "$MEM_MB" -eq 0 ] && MEM_MB=0
 
 if [ -z "$GOMEMLIMIT_VALUE" ]; then
     AUTO_MB=$(( MEM_MB / 4 ))
@@ -86,49 +109,66 @@ case "$GOGC_VALUE" in
     *[!0-9]*|"") die "неверное значение GOGC: $GOGC_VALUE (целое число, например 75)" ;;
 esac
 
-# рекомендация по объёму ОЗУ
 if [ "$MEM_MB" -ge 512 ]; then
-    REC_TEXT="обычно не требуется: памяти достаточно. Можно применить как страховку."
+    REC_SHORT="обычно не требуется"
+    REC_DETAIL="Памяти достаточно, настройка не обязательна."
 elif [ "$MEM_MB" -ge 192 ]; then
-    REC_TEXT="можно применить, если mihomo заметно разрастается или есть просадки."
+    REC_SHORT="можно применить"
+    REC_DETAIL="Если mihomo заметно разрастается или есть просадки."
 else
-    REC_TEXT="рекомендуется применить: памяти мало."
+    REC_SHORT="рекомендуется"
+    REC_DETAIL="Памяти мало: mihomo может занимать её заметную часть."
 fi
 
-# ---------------- apply / restore ----------------
+# ---- изменение ---------------------------------------------------
 
-show_diff() {
-    grep -v -E 'procd_append_param env (GOGC|GOMEMLIMIT)=' "$INIT" > "$TMP" || die "не удалось прочитать $INIT"
-    awk -v gogc="$GOGC_VALUE" -v gomem="$GOMEMLIMIT_VALUE" '
-        /procd_set_param env SSCLASH_ROOT/ {
-            print
-            print "\tprocd_append_param env GOGC=\"" gogc "\""
-            print "\tprocd_append_param env GOMEMLIMIT=\"" gomem "\""
-            next
-        }
-        { print }
-    ' "$TMP" > "$TMP.new" || die "не удалось подготовить изменения"
+build_new() {
+    grep -v -E 'procd_append_param env (GOGC|GOMEMLIMIT)=' "$INIT" > "$TMP" \
+        || die "не удалось прочитать $INIT"
 
-    say "Будет добавлено в $INIT:"
-    say "  procd_append_param env GOGC=\"$GOGC_VALUE\""
-    say "  procd_append_param env GOMEMLIMIT=\"$GOMEMLIMIT_VALUE\""
-    say ""
-
-    if command -v diff >/dev/null 2>&1; then
-        diff -u "$INIT" "$TMP.new" 2>/dev/null | sed -n '3,$p'
+    if [ "$KIND" = "SSClash-Go" ]; then
+        awk -v anchor="$ANCHOR" -v gogc="$GOGC_VALUE" -v gomem="$GOMEMLIMIT_VALUE" '
+            index($0, anchor) {
+                print
+                print "\tprocd_append_param env GOGC=\"" gogc "\""
+                print "\tprocd_append_param env GOMEMLIMIT=\"" gomem "\""
+                next
+            }
+            { print }
+        ' "$TMP" > "$TMP.new" || die "не удалось подготовить изменения"
+    else
+        awk -v anchor="$ANCHOR" -v gogc="$GOGC_VALUE" -v gomem="$GOMEMLIMIT_VALUE" '
+            index($0, anchor) && !done {
+                print
+                print "\tprocd_append_param env GOGC=\"" gogc "\""
+                print "\tprocd_append_param env GOMEMLIMIT=\"" gomem "\""
+                done = 1
+                next
+            }
+            { print }
+        ' "$TMP" > "$TMP.new" || die "не удалось подготовить изменения"
     fi
+
+    PREVIEW="	procd_append_param env GOGC=\"$GOGC_VALUE\"
+	procd_append_param env GOMEMLIMIT=\"$GOMEMLIMIT_VALUE\""
 }
 
 apply_values() {
+    build_new
+
     say ""
-    say "Будет применено:"
-    say "  GOGC       = $GOGC_VALUE"
-    say "  GOMEMLIMIT = $GOMEMLIMIT_VALUE"
+    say "Вариант:      $KIND"
+    say "init:         $INIT"
+    say "ОЗУ роутера:  $MEM_MB MiB"
+    say "GOGC:         $GOGC_VALUE"
+    say "GOMEMLIMIT:   $GOMEMLIMIT_VALUE"
+    say ""
+    say "Будет добавлено:"
+    printf '%s\n' "$PREVIEW"
     say ""
 
     if [ "$DRY_RUN" -eq 1 ]; then
-        say "Изменения (dry-run, файл не меняется):"
-        show_diff
+        say "(dry-run) файл не меняется"
         rm -f "$TMP" "$TMP.new"
         return 0
     fi
@@ -142,28 +182,17 @@ apply_values() {
         say "Бэкап уже есть: $BACKUP"
     fi
 
-    grep -v -E 'procd_append_param env (GOGC|GOMEMLIMIT)=' "$INIT" > "$TMP" || die "не удалось прочитать $INIT"
-    awk -v gogc="$GOGC_VALUE" -v gomem="$GOMEMLIMIT_VALUE" '
-        /procd_set_param env SSCLASH_ROOT/ {
-            print
-            print "\tprocd_append_param env GOGC=\"" gogc "\""
-            print "\tprocd_append_param env GOMEMLIMIT=\"" gomem "\""
-            next
-        }
-        { print }
-    ' "$TMP" > "$TMP.new" || die "не удалось подготовить изменения"
-
     mv "$TMP.new" "$INIT" || die "не удалось записать $INIT"
     chmod 755 "$INIT"
     rm -f "$TMP"
 
-    say "Перезапуск SSClash..."
+    say "Перезапуск $KIND..."
     "$INIT" restart || die "перезапуск не удался."
 
     sleep 5
     PID="$(pgrep -f '^/opt/clash/bin/clash ' 2>/dev/null | head -n 1)"
     if [ -z "$PID" ]; then
-        warn "процесс mihomo ещё не виден. Настройки применятся при следующем старте."
+        say "Процесс mihomo ещё не виден, настройки применятся при следующем старте."
         return 0
     fi
 
@@ -195,51 +224,46 @@ restore_values() {
     fi
     [ "$(id -u)" = "0" ] || die "нужны права root."
     cp "$BACKUP" "$INIT" || die "не удалось восстановить $INIT"
-    say "Перезапуск SSClash..."
+    say "Перезапуск $KIND..."
     "$INIT" restart || die "перезапуск не удался."
     say "Готово: настройка памяти убрана."
 }
 
-# ---------------- non-interactive paths ----------------
+# ---- ветки запуска ---------------------------------------------
 
 if [ "$RESTORE" -eq 1 ]; then
     restore_values
     exit 0
 fi
 
-if [ "$DRY_RUN" -eq 1 ]; then
+if [ "$DRY_RUN" -eq 1 ] || [ "$ASSUME_YES" -eq 1 ] || [ "$EXPLICIT" -ge 2 ]; then
     apply_values
     exit 0
 fi
 
-if [ "$ASSUME_YES" -eq 1 ] || [ "$EXPLICIT" -ge 2 ]; then
-    apply_values
-    exit 0
-fi
-
-# не терминал и нет флагов — ничего не меняем
 if [ ! -t 0 ]; then
-    say "SSClash-Go memory tuning"
-    say "ОЗУ роутера:   $MEM_MB MiB"
+    say "SSClash: настройка памяти"
+    say "Вариант:      $KIND"
+    say "ОЗУ роутера:  $MEM_MB MiB"
     say "Рекомендуется: GOGC=$GOGC_VALUE, GOMEMLIMIT=$GOMEMLIMIT_VALUE"
-    say "Совет:         $REC_TEXT"
     say ""
-    say "Запустите интерактивно (в терминале) или укажите:"
+    say "Запустите интерактивно или укажите:"
     say "  sh $0 --yes"
     say "  sh $0 50 96MiB"
     exit 0
 fi
 
-# ---------------- interactive menu ----------------
+# ---- интерактивное меню ---------------------------------------
 
 say "========================================"
-say " SSClash-Go: настройка памяти"
+say " SSClash: настройка памяти"
 say "========================================"
+say " Вариант:      $KIND"
+say " init:         $INIT"
 say " ОЗУ роутера:  $MEM_MB MiB"
-say " Рекомендуется: GOGC=$GOGC_VALUE, GOMEMLIMIT=$GOMEMLIMIT_VALUE"
-say " Совет:        $REC_TEXT"
+say " Совет:        $REC_SHORT"
+say " $REC_DETAIL"
 say ""
-
 while :; do
     say "Что сделать?"
     say "  1) Применить рекомендуемые значения"

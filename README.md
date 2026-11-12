@@ -472,6 +472,9 @@ Mihomo написан на Go. На роутерах с небольшим об�
 `GOMEMLIMIT` — **не жёсткий лимит**: он не гарантирует, что процесс
 не превысит значение, а лишь подсказывает рантайму, когда убираться.
 
+Скрипт сам определяет вариант: **SSClash-Go** (`/etc/init.d/ssclash`)
+или **SSClash 4** (`/etc/init.d/clash`) — выбирать вручную ничего не нужно.
+
 ### Нужно ли это вам
 
 Подключитесь к роутеру по SSH и посмотрите объём ОЗУ:
@@ -503,11 +506,13 @@ wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rul
 
 ```
 ========================================
- SSClash-Go: настройка памяти
+ SSClash: настройка памяти
 ========================================
+ Вариант:      SSClash-Go
+ init:         /etc/init.d/ssclash
  ОЗУ роутера:  986 MiB
- Рекомендуется: GOGC=75, GOMEMLIMIT=246MiB
- Совет:        обычно не требуется: памяти достаточно.
+ Совет:        обычно не требуется
+ Памяти достаточно, настройка не обязательна.
 
 Что сделать?
   1) Применить рекомендуемые значения
@@ -525,7 +530,7 @@ SSClash и покажет итоговые переменные и текущи�
 ```sh
 sh /tmp/memory-limit.sh --yes        # применить рекомендуемые
 sh /tmp/memory-limit.sh 50 96MiB     # свои значения
-sh /tmp/memory-limit.sh --dry-run    # показать diff, ничего не менять
+sh /tmp/memory-limit.sh --dry-run    # показать, что изменится
 sh /tmp/memory-limit.sh --restore    # откатить
 ```
 
@@ -546,7 +551,8 @@ sh /tmp/memory-limit.sh --restore    # откатить
 - `scripts/memory-limit.sh` — путь **внутри репозитория**. На роутере скрипт
   лежит там, куда вы его скачали, поэтому запуск — `sh memory-limit.sh`
   (или `sh /tmp/memory-limit.sh`), а не `scripts/memory-limit.sh`;
-- обновление SSClash-Go заменяет `/etc/init.d/ssclash` — после обновления
+- обновление SSClash-Go или SSClash 4 заменяет init-скрипт
+  (`/etc/init.d/ssclash` или `/etc/init.d/clash`) — после обновления
   настройку нужно применить заново (скрипт можно запускать повторно);
 - перезапуск службы кратко прерывает соединения;
 - идея и базовая реализация — [F5GO-Mihomo-stuff](https://github.com/F5GO/F5GO-Mihomo-stuff) (MIT).
