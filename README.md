@@ -244,6 +244,30 @@ category-ru@domain
    каждые 12 часов (`interval: 43200`), подписку — каждый час
    (`interval: 3600`). Отдельно ничего настраивать не нужно.
 
+Скачивание правил идёт через группу `PROXY`:
+
+```yaml
+a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200, proxy: PROXY }
+```
+
+`proxy: PROXY` — это `fallback` из `Fast` и `DIRECT`. Поэтому:
+
+- если провайдер режет `raw.githubusercontent.com`, файлы всё равно
+  скачаются через прокси-узел;
+- если прокси недоступен, используется прямой маршрут;
+- если не скачалось ни то ни другое, mihomo оставляет **последнюю
+  успешную копию** — правила продолжают работать, просто не обновляются.
+
+Без прокси (или при полностью закрытом GitHub) можно переключить `url`
+провайдеров на зеркало, например jsDelivr:
+
+```yaml
+url: https://cdn.jsdelivr.net/gh/k4reon/mihomo-rules-ru@main/dist/k4reon-games-domains.mrs
+```
+
+Зеркала кэшируют файлы дольше (до 12 часов), поэтому правки появляются
+там с задержкой.
+
 Вручную: кнопка **Update Providers** в веб-интерфейсе SSClash или
 `PUT /providers/rules/<имя>` через API mihomo.
 

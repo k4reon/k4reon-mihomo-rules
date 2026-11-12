@@ -103,9 +103,9 @@ sniffer:
 # ANCHORS
 # =======================
 anchors:
-  a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200 }
-  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200 }
-  a3: &classical { type: http, format: text, behavior: classical, interval: 43200 }
+  a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200, proxy: PROXY }
+  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200, proxy: PROXY }
+  a3: &classical { type: http, format: text, behavior: classical, interval: 43200, proxy: PROXY }
 
 # =======================
 # PROXY PROVIDERS
