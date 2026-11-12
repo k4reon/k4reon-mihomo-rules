@@ -266,7 +266,7 @@ while :; do
     say "  1) Установить Tailscale и настроить интерфейс/firewall"
     say "  2) Проверить, установлен ли Tailscale"
     say "  0) Выйти"
-    printf 'Выбор [1]: '
+    printf 'Выбор: '
     read choice
 
     case "$choice" in

@@ -212,7 +212,7 @@ while :; do
     say "  1) Применить (без логов, GOMEMLIMIT=35MiB, GODEBUG)"
     say "  2) Откатить"
     say "  0) Выйти"
-    printf 'Выбор [1]: '
+    printf 'Выбор: '
     read choice
     case "$choice" in
         ""|1)

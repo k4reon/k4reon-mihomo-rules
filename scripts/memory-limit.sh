@@ -270,7 +270,7 @@ while :; do
     say "  2) Указать свои значения"
     say "  3) Откатить (убрать настройку)"
     say "  0) Выйти"
-    printf 'Выбор [1]: '
+    printf 'Выбор: '
     read choice
 
     case "$choice" in
