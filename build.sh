@@ -47,7 +47,7 @@ fi
 export MIHOMO_BIN="$TOOLS/mihomo"
 
 # --- 2. merge public lists + local rules ---
-rm -f "$DIST"/*
+rm -rf "$DIST"/*
 rm -f "$BUILD"/*-domains.txt "$BUILD"/*-ip.txt "$BUILD"/upstream-*
 echo "Merging sources..."
 python3 "$ROOT/scripts/merge.py"

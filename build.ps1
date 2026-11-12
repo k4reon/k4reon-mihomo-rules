@@ -33,7 +33,7 @@ if (-not (Test-Path $exe)) {
 $env:MIHOMO_BIN = $exe
 
 # --- 2. merge public lists + local rules ---
-Remove-Item "$dist\*" -Force -ErrorAction SilentlyContinue
+Remove-Item "$dist\*" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item "$build\*-domains.txt","$build\*-ip.txt","$build\upstream-*" -Force -ErrorAction SilentlyContinue
 Write-Host 'Merging sources...'
 & python (Join-Path $root 'scripts\merge.py')
