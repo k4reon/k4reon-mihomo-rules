@@ -9,8 +9,10 @@
 #         input ACCEPT, output ACCEPT, forward REJECT,
 #         masq 1, mtu_fix 1, network tailscale;
 #    4) создаёт forwarding tailscale -> wan;
-#    5) применяет настройки и перезапускает сеть/firewall;
-#    6) предлагает ввести auth key и выполнить tailscale up.
+#    5) применяет настройки и перезапускает сеть/firewall.
+#
+#  Подключение к tailnet скрипт не делает — после настройки выполните
+#  tailscale up вручную (или подключитесь как обычно по SSH).
 #
 #  Запуск (дальше скрипт спросит):
 #    sh tailscale-install.sh
@@ -166,39 +168,13 @@ configure() {
     say "Готово."
 }
 
-# ---------------- подключение к tailnet --------------------------
-
-connect_tailnet() {
-    [ "$DRY_RUN" -eq 1 ] && return 0
-    command -v tailscale >/dev/null 2>&1 || return 0
-
-    say ""
-    say "Подключение к tailnet."
-    printf 'Вставьте auth key (Enter — пропустить): '
-    read key
-    if [ -z "$key" ]; then
-        say "Пропущено. Потом выполните: tailscale up"
-        return 0
-    fi
-
-    printf 'Использовать DNS Tailscale / MagicDNS? [y/N]: '
-    read dns
-    case "$dns" in
-        y|Y|yes|да|Да) DNS_FLAG="--accept-dns=true" ;;
-        *) DNS_FLAG="--accept-dns=false" ;;
-    esac
-
-    say "tailscale up $DNS_FLAG ..."
-    tailscale up --auth-key="$key" $DNS_FLAG || say "Не удалось: проверьте ключ и сеть."
-    sleep 2
-    tailscale status 2>/dev/null | head -n 5 || true
-}
-
 # ---------------- меню -------------------------------------------
 
 if [ "$ASSUME_YES" -eq 1 ]; then
     install_pkg
     configure
+    say ""
+    say "Дальше подключитесь сами: tailscale up"
     exit 0
 fi
 
@@ -231,16 +207,17 @@ while :; do
     say "Что сделать?"
     say "  1) Установить Tailscale и настроить интерфейс/firewall"
     say "  2) Только настроить интерфейс/firewall"
-    say "  3) Подключить к tailnet (auth key)"
     say "  0) Выйти"
     printf 'Выбор [1]: '
     read choice
 
     case "$choice" in
-        ""|1) install_pkg; configure; connect_tailnet; break ;;
-        2)    configure; connect_tailnet; break ;;
-        3)    connect_tailnet; break ;;
+        ""|1) install_pkg; configure; break ;;
+        2)    configure; break ;;
         0)    say "Выход."; exit 0 ;;
-        *)    say "Введите 1, 2, 3 или 0." ;;
+        *)    say "Введите 1, 2 или 0." ;;
     esac
 done
+
+say ""
+say "Дальше подключитесь сами: tailscale up"

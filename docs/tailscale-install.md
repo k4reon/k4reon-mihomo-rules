@@ -30,9 +30,10 @@
    | Охватываемые сети | `tailscale` |
 
 5. создаёт forwarding `tailscale → wan`;
-6. применяет настройки (`uci commit`, `reload network/firewall`);
-7. предлагает ввести auth key и выполнить `tailscale up`
-   (с вопросом про MagicDNS: по умолчанию DNS Tailscale выключен).
+6. применяет настройки (`uci commit`, `reload network/firewall`).
+
+Подключение к tailnet скрипт не делает: после настройки выполните
+`tailscale up` сами (или подключитесь как обычно по SSH).
 
 ## Запуск
 
@@ -55,15 +56,12 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 Что сделать?
   1) Установить Tailscale и настроить интерфейс/firewall
   2) Только настроить интерфейс/firewall
-  3) Подключить к tailnet (auth key)
   0) Выйти
 Выбор [1]:
 ```
 
-Enter — установить и настроить. В конце скрипт попросит auth key:
-
-- вставить ключ — выполнит `tailscale up --auth-key=...`;
-- нажать Enter — пропустить, потом вручную `tailscale up` (покажет ссылку для входа).
+Enter — установить и настроить. В конце скрипт напишет:
+`Дальше подключитесь сами: tailscale up`.
 
 ## Без вопросов
 
