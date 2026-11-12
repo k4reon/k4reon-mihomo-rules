@@ -86,6 +86,15 @@ case "$GOGC_VALUE" in
     *[!0-9]*|"") die "неверное значение GOGC: $GOGC_VALUE (целое число, например 75)" ;;
 esac
 
+# рекомендация по объёму ОЗУ
+if [ "$MEM_MB" -ge 512 ]; then
+    REC_TEXT="обычно не требуется: памяти достаточно. Можно применить как страховку."
+elif [ "$MEM_MB" -ge 192 ]; then
+    REC_TEXT="можно применить, если mihomo заметно разрастается или есть просадки."
+else
+    REC_TEXT="рекомендуется применить: памяти мало."
+fi
+
 # ---------------- apply / restore ----------------
 
 show_diff() {
@@ -203,7 +212,9 @@ fi
 # не терминал и нет флагов — ничего не меняем
 if [ ! -t 0 ]; then
     say "SSClash-Go memory tuning"
+    say "ОЗУ роутера:   $MEM_MB MiB"
     say "Рекомендуется: GOGC=$GOGC_VALUE, GOMEMLIMIT=$GOMEMLIMIT_VALUE"
+    say "Совет:         $REC_TEXT"
     say ""
     say "Запустите интерактивно (в терминале) или укажите:"
     say "  sh $0 --yes"
@@ -218,6 +229,7 @@ say " SSClash-Go: настройка памяти"
 say "========================================"
 say " ОЗУ роутера:  $MEM_MB MiB"
 say " Рекомендуется: GOGC=$GOGC_VALUE, GOMEMLIMIT=$GOMEMLIMIT_VALUE"
+say " Совет:        $REC_TEXT"
 say ""
 
 while :; do

@@ -498,7 +498,8 @@ free -m
 wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/memory-limit.sh && sh /tmp/memory-limit.sh
 ```
 
-Дальше скрипт сам всё спросит:
+Дальше скрипт сам определит объём ОЗУ, посчитает лимит, скажет, нужно ли
+это вам, и предложит меню:
 
 ```
 ========================================
@@ -506,6 +507,7 @@ wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rul
 ========================================
  ОЗУ роутера:  986 MiB
  Рекомендуется: GOGC=75, GOMEMLIMIT=246MiB
+ Совет:        обычно не требуется: памяти достаточно.
 
 Что сделать?
   1) Применить рекомендуемые значения
