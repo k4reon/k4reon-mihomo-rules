@@ -71,6 +71,8 @@ build_new() {
 
     if grep -q 'procd_append_param env TS_NO_LOGS_NO_SUPPORT=' "$TMP"; then
         # строка про логи уже есть — просто добавляем после неё
+        PREVIEW="  procd_append_param env GOMEMLIMIT=35MiB
+  procd_append_param env GODEBUG=madvdontneed=1"
         awk '
             /procd_append_param env TS_NO_LOGS_NO_SUPPORT=/ {
                 print
@@ -81,6 +83,10 @@ build_new() {
             { print }
         ' "$TMP" > "$TMP.new" || die "не удалось подготовить изменения"
     else
+        PREVIEW="  # Disable logging to log.tailscale.com
+  procd_append_param env TS_NO_LOGS_NO_SUPPORT=true
+  procd_append_param env GOMEMLIMIT=35MiB
+  procd_append_param env GODEBUG=madvdontneed=1"
         awk '
             /procd_set_param env TS_DEBUG_FIREWALL_MODE=/ {
                 print
@@ -99,8 +105,9 @@ build_new() {
 apply_changes() {
     build_new
 
-    say "Изменения:"
-    diff -u "$INIT" "$TMP.new" 2>/dev/null | sed -n '3,$p'
+    say "Будет добавлено в $INIT:"
+    say ""
+    printf '%s\n' "$PREVIEW"
     say ""
 
     if [ "$DRY_RUN" -eq 1 ]; then

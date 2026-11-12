@@ -108,7 +108,15 @@ show_diff() {
         }
         { print }
     ' "$TMP" > "$TMP.new" || die "не удалось подготовить изменения"
-    diff -u "$INIT" "$TMP.new" 2>/dev/null | sed -n '3,$p'
+
+    say "Будет добавлено в $INIT:"
+    say "  procd_append_param env GOGC=\"$GOGC_VALUE\""
+    say "  procd_append_param env GOMEMLIMIT=\"$GOMEMLIMIT_VALUE\""
+    say ""
+
+    if command -v diff >/dev/null 2>&1; then
+        diff -u "$INIT" "$TMP.new" 2>/dev/null | sed -n '3,$p'
+    fi
 }
 
 apply_values() {
