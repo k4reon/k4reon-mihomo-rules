@@ -4,7 +4,7 @@
 
 # k4reon-mihomo-rules
 
-[![build-mrs](https://github.com/k4reon/mihomo-rules-ru/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/k4reon/mihomo-rules-ru/actions/workflows/build.yml)
+[![build-mrs](https://github.com/k4reon/k4reon-mihomo-rules/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/k4reon/k4reon-mihomo-rules/actions/workflows/build.yml)
 
 ![GitHub](https://img.shields.io/badge/GitHub-mihomo--rules--ru-black?style=for-the-badge&logo=github)
 ![OpenWrt](https://img.shields.io/badge/OpenWrt-Latest-blue?style=for-the-badge&logo=openwrt)
@@ -366,7 +366,7 @@ a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200, proxy:
 провайдеров на зеркало, например jsDelivr:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/k4reon/mihomo-rules-ru@main/dist/k4reon-games-domains.mrs
+url: https://cdn.jsdelivr.net/gh/k4reon/k4reon-mihomo-rules@main/dist/k4reon-games-domains.mrs
 ```
 
 Зеркала кэшируют файлы дольше (до 12 часов), поэтому правки появляются
@@ -516,7 +516,7 @@ free -m
 Одна команда — скачает скрипт и сразу запустит его:
 
 ```sh
-wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/memory-limit.sh && sh /tmp/memory-limit.sh
+wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/scripts/memory-limit.sh && sh /tmp/memory-limit.sh
 ```
 
 Дальше скрипт сам определит объём ОЗУ, посчитает лимит, скажет, нужно ли

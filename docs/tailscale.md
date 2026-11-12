@@ -36,7 +36,7 @@ Tailscale — Go-приложение. На роутере процесс `tails
 Одна команда на роутере по SSH от root:
 
 ```sh
-wget -O /tmp/tailscale-tune.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/tailscale-tune.sh && sh /tmp/tailscale-tune.sh
+wget -O /tmp/tailscale-tune.sh https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/scripts/tailscale-tune.sh && sh /tmp/tailscale-tune.sh
 ```
 
 Дальше скрипт покажет diff и спросит:

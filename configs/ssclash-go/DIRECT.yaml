@@ -212,22 +212,22 @@ proxy-groups:
 # =======================
 # Только проксируемые категории + реклама (шаблоны — в anchors).
 rule-providers:
-  k4reon-ads-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-ads-domains.mrs }
-  k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-youtube-domains.mrs }
-  k4reon-youtube-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-youtube-ip.mrs }
-  k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-games-domains.mrs }
-  k4reon-games-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-games-ip.mrs }
-  k4reon-games-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-games-ports.txt }
-  k4reon-discord-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-discord-domains.mrs }
-  k4reon-discord-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-discord-ip.mrs }
-  k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-discord-ports.txt }
-  k4reon-ai-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-ai-domains.mrs }
-  k4reon-ai-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-ai-ip.mrs }
-  k4reon-messengers-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-messengers-domains.mrs }
-  k4reon-messengers-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-messengers-ip.mrs }
-  k4reon-social-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-social-domains.mrs }
-  k4reon-social-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-social-ip.mrs }
-  k4reon-custom-proxy: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-custom-proxy.txt }
+  k4reon-ads-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ads-domains.mrs }
+  k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-domains.mrs }
+  k4reon-youtube-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-ip.mrs }
+  k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
+  k4reon-games-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ip.mrs }
+  k4reon-games-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-ports.txt }
+  k4reon-discord-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-domains.mrs }
+  k4reon-discord-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ip.mrs }
+  k4reon-discord-ports: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-discord-ports.txt }
+  k4reon-ai-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-domains.mrs }
+  k4reon-ai-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ai-ip.mrs }
+  k4reon-messengers-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-domains.mrs }
+  k4reon-messengers-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-messengers-ip.mrs }
+  k4reon-social-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-domains.mrs }
+  k4reon-social-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-ip.mrs }
+  k4reon-custom-proxy: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-proxy.txt }
 
 # =======================
 # RULES
