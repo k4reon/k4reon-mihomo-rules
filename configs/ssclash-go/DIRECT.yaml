@@ -15,36 +15,37 @@
 #  Перед использованием заменить url подписки.
 # ============================================================
 
-mode: rule
-tproxy-port: 7894
-udp: true
-endpoint-independent-nat: true
-ipv6: false
-log-level: info
-allow-lan: false
+# --- Общие ---
+mode: rule                      # только правила; global/direct не используем
+tproxy-port: 7894               # порт прозрачного прокси (tproxy) для LAN-трафика
+udp: true                       # без UDP не работают игры, Discord, голос, часть AI
+endpoint-independent-nat: true  # full-cone NAT: открытый NAT в играх, P2P переиспользует mapping
+ipv6: false                     # IPv6 выключен: у части провайдеров ломает маршрутизацию
+log-level: info                 # info достаточно; debug — только для отладки
+allow-lan: false                # прокси и API не слушаем на всех интерфейсах
 
-geo-auto-update: true
-geo-update-interval: 24
-geox-url:
+geo-auto-update: true           # автоматически обновлять geoip/geosite
+geo-update-interval: 24         # раз в 24 часа
+geox-url:                       # официальные релизы MetaCubeX
   geoip: "https://github.com/MetaCubeX/meta-rules-dat/releases/latest/download/geoip.dat"
   geosite: "https://github.com/MetaCubeX/meta-rules-dat/releases/latest/download/geosite.dat"
 
 profile:
-  store-selected: true
+  store-selected: true          # запоминать выбранные узлы между перезапусками
 
 experimental:
-  connection-pool: true
-  udp-fallback-match: true
+  connection-pool: true         # переиспользовать соединения: меньше задержка и нагрузка
+  udp-fallback-match: true      # UDP без совпадения по правилам обрабатывать как MATCH
 
-udp-timeout: 300
-routing-mark: 2
+udp-timeout: 300                # сколько секунд держать UDP-сессию без трафика
+routing-mark: 2                 # fwmark для маршрутизации трафика самого mihomo
 
-unified-delay: true
-tcp-concurrent: true
+unified-delay: true             # единая методика замера задержки — цифры сравнимы
+tcp-concurrent: true            # параллельные TCP-попытки: быстрее устанавливается соединение
 
-keep-alive-idle: 600
-keep-alive-interval: 30
-disable-keep-alive: false
+keep-alive-idle: 600            # держать keep-alive 10 минут простоя
+keep-alive-interval: 30         # keep-alive пинг каждые 30 секунд
+disable-keep-alive: false       # не отключать: меньше переподключений
 
 # SSClash-Go: API только на localhost.
 external-controller: 127.0.0.1:9090
@@ -53,77 +54,79 @@ external-controller: 127.0.0.1:9090
 # DNS
 # =======================
 dns:
-  enable: true
-  listen: 127.0.0.1:7874
-  ipv6: false
+  enable: true                  # включить встроенный DNS-сервер mihomo
+  listen: 127.0.0.1:7874        # слушаем только локально; запросы заворачивает tproxy
+  ipv6: false                   # AAAA не запрашиваем: IPv6 выключен
 
-  cache-algorithm: arc
-  respect-rules: false
+  cache-algorithm: arc          # ARC-кэш: быстрее и экономнее обычного LRU
+  respect-rules: false          # DNS не подчиняется правилам маршрутизации
 
-  default-nameserver:
+  default-nameserver:           # бутстрап: чем резолвить адреса самих DoH-серверов
     - 9.9.9.9
     - 1.1.1.1
 
-  proxy-server-nameserver:
+  proxy-server-nameserver:      # чем резолвить адреса прокси-серверов до поднятия прокси
     - 77.88.8.8
     - 8.8.8.8
 
-  nameserver:
+  nameserver:                   # обычные запросы — DoH через группу Fast (прокси)
     - 'https://dns.quad9.net/dns-query#Fast'
     - 'https://1.1.1.1/dns-query#Fast'
 
-  nameserver-policy:
-    '+.lan': system
-    '+.local': system
-    "+.kion.ru": system
-    "+.wink.ru": system
-    'geosite:category-ru': [77.88.8.8, 77.88.8.1]
-    'rule-set:k4reon-ai-domains': 'https://1.1.1.1/dns-query#Ai'
+  nameserver-policy:            # исключения: какой домен резолвить где
+    '+.lan': system             # локальная сеть — системный DNS
+    '+.local': system           # mDNS-домены — системный DNS
+    "+.kion.ru": system         # KION: системный DNS, чтобы работал в РФ
+    "+.wink.ru": system         # Wink: то же
+    'geosite:category-ru': [77.88.8.8, 77.88.8.1]                 # RU-сервисы — DNS Яндекса
+    'rule-set:k4reon-ai-domains': 'https://1.1.1.1/dns-query#Ai'  # AI — DoH через группу Ai
 
 # =======================
 # SNIFFER
 # =======================
 sniffer:
-  enable: true
-  force-dns-mapping: true
-  parse-pure-ip: true
-  override-destination: false
+  enable: true                  # включить определение домена из трафика
+  force-dns-mapping: true       # подставлять домен из DNS-ответа в соединение
+  parse-pure-ip: true           # сниффить соединения «только по IP» (без домена)
+  override-destination: false   # не подменять адрес, только определять домен
   sniff:
     HTTP:
-      ports: [80, 8080-8880]
+      ports: [80, 8080-8880]    # порты, которые считаем HTTP
     TLS:
-      ports: [443, 8443]
-  skip-domain:
+      ports: [443, 8443]        # порты, которые считаем TLS (SNI)
+  skip-domain:                  # эти домены не сниффим
     - '+.lan'
     - '+.local'
-    - '+.apple.com'
+    - '+.apple.com'             # Apple: подмена ломает часть сервисов
     - '+.icloud.com'
 
 # =======================
 # ANCHORS
 # =======================
 anchors:
-  a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200, proxy: PROXY }
-  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200, proxy: PROXY }
-  a3: &classical { type: http, format: text, behavior: classical, interval: 43200, proxy: PROXY }
+  # Шаблоны rule-providers: обновление раз в 12 часов, скачивание через группу PROXY.
+  # PROXY — fallback Fast→DIRECT: работает и при блокировке GitHub, и без прокси.
+  a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200, proxy: PROXY }          # домены (mrs)
+  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200, proxy: PROXY }          # IP-сети (mrs)
+  a3: &classical { type: http, format: text, behavior: classical, interval: 43200, proxy: PROXY }   # текст: порты, AND, custom
 
 # =======================
 # PROXY PROVIDERS
 # =======================
 proxy-providers:
   main:
-    type: http
-    proxy: DIRECT
-    url: "https://example.com/your-subscription"
-    interval: 3600
-    path: ./providers/main.yaml
+    type: http                  # подписка по HTTP(S)
+    proxy: DIRECT               # качаем напрямую: прокси ещё не поднят, лишняя зависимость не нужна
+    url: "https://example.com/your-subscription"   # ← заменить на свою подписку
+    interval: 3600              # обновлять подписку раз в час
+    path: ./providers/main.yaml # локальный кэш подписки
     health-check:
-      enable: true
-      url: http://cp.cloudflare.com/generate_204
-      interval: 600
-      timeout: 5000
-      expected-status: 204
-      lazy: true
+      enable: true              # проверять доступность узлов
+      url: http://cp.cloudflare.com/generate_204  # лёгкий URL для проверки
+      interval: 600             # проверка каждые 10 минут
+      timeout: 5000             # таймаут одной проверки, мс
+      expected-status: 204      # успех — код 204
+      lazy: true                # проверять только используемые узлы
 
 # =======================
 # PROXY GROUPS
@@ -131,7 +134,7 @@ proxy-providers:
 # Группы те же, что в PROXY-профиле: даже при MATCH,DIRECT
 # игры/YouTube/Discord/AI/мессенджеры должны иметь свой выход.
 proxy-groups:
-  - name: PROXY
+  - name: PROXY    # общий выход: fallback Fast → DIRECT
     type: fallback
     proxies:
       - Fast
@@ -142,7 +145,7 @@ proxy-groups:
     lazy: true
     icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Global.png
 
-  - name: Fast
+  - name: Fast    # авто-выбор лучшего узла по задержке (url-test)
     type: url-test
     include-all: true
     #filter: "^(?!.*(🇷🇺)).*$"
@@ -153,7 +156,7 @@ proxy-groups:
     lazy: true
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Rocket.png
 
-  - name: YouTube
+  - name: YouTube    # отдельный выход для YouTube (fallback)
     type: fallback
     include-all: true
     #filter: "(?i)(🇫🇮|🇸🇪|🇳🇱|🇩🇪|🇨🇿)"
@@ -163,7 +166,7 @@ proxy-groups:
     lazy: true
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/YouTube.png
 
-  - name: Ai
+  - name: Ai    # нейросети: ChatGPT, Gemini и др. (fallback)
     type: fallback
     include-all: true
     #filter: "(?i)(🇭🇺|🇧🇬|🇵🇱|🇨🇿|🇩🇪|🇦🇹|🇳🇱)"
@@ -173,7 +176,7 @@ proxy-groups:
     lazy: true
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/ChatGPT.png
 
-  - name: Discord
+  - name: Discord    # Discord: голос и медиа (fallback)
     type: fallback
     include-all: true
     url: http://cp.cloudflare.com/generate_204
@@ -182,13 +185,13 @@ proxy-groups:
     lazy: true
     icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Discord.png
 
-  - name: Games
+  - name: Games    # игры: по умолчанию DIRECT, узел выбирается вручную
     type: select
     include-all: true
     proxies: [DIRECT]
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Game.png
 
-  - name: Messengers
+  - name: Messengers    # Telegram, WhatsApp (fallback)
     type: fallback
     include-all: true
     url: http://cp.cloudflare.com/generate_204
@@ -197,7 +200,7 @@ proxy-groups:
     lazy: true
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Telegram_X.png
 
-  - name: GLOBAL
+  - name: GLOBAL    # скрытая группа: переключить весь трафик
     type: select
     hidden: true
     proxies:
@@ -207,7 +210,7 @@ proxy-groups:
 # =======================
 # RULE PROVIDERS
 # =======================
-# Только проксируемые категории + реклама.
+# Только проксируемые категории + реклама (шаблоны — в anchors).
 rule-providers:
   k4reon-ads-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-ads-domains.mrs }
   k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/dist/k4reon-youtube-domains.mrs }
@@ -240,6 +243,7 @@ rule-providers:
 #  8. social → Fast
 #  9. MATCH → DIRECT
 rules:
+  # no-resolve — не резолвить домен ради IP-правила: быстрее и меньше DNS-запросов
   # --- Реклама ---
   - RULE-SET,k4reon-ads-domains,REJECT
   # Custom override: must be before RU rules, otherwise DOMAIN-SUFFIX,ru wins
@@ -251,6 +255,7 @@ rules:
 
   # --- Игры ---
   - RULE-SET,k4reon-games-domains,Games
+  # IP-набор игр — только для UDP, чтобы не завернуть сюда их TCP-трафик
   - AND,((NETWORK,UDP),(RULE-SET,k4reon-games-ip)),Games
   - RULE-SET,k4reon-games-ports,Games
 
