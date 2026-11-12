@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.png" alt="k4reon" width="180">
+  <img src="docs/images/ssclash-logo.png" alt="SSClash — Super Simple Clash" width="180">
 </p>
 
 # mihomo rules ru for ssclash
