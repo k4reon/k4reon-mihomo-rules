@@ -215,11 +215,13 @@
 +.electronicarts.fr
 +.embark-studios.com
 +.embark.games
++.embark.net
 +.enlisted.net
 +.epicgames-download1.akamaized.net
 +.epicgames.com
 +.epicgames.dev
 +.epicgamescdn.com
++.es-cf.net
 +.es-pio.net
 +.escapefromtarkov.com
 +.europeanwarzoneseries.com

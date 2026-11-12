@@ -19,3 +19,5 @@ es-pio.net
 gaming-sdk.com
 anybrain.gg
 arcraiders.com
+embark.net
+es-cf.net
