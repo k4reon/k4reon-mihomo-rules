@@ -21,3 +21,7 @@ anybrain.gg
 arcraiders.com
 embark.net
 es-cf.net
+
+# Gaming tools and drivers
+overwolf.com
+nvidia.com

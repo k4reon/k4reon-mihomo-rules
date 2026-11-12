@@ -511,6 +511,7 @@
 +.nintendowii.com
 +.notify.ppy.sh
 +.noxygames.com
++.nvidia.com
 +.offworldindustries.com
 +.offworldindustries.net
 +.omotenashi.cygames.jp
@@ -524,6 +525,7 @@
 +.orithegame.com
 +.osu.ppy.sh
 +.overwatch.nosdn.127.net
++.overwolf.com
 +.pandanet-igs.com
 +.papermc.io
 +.paragon.com
