@@ -141,10 +141,14 @@ check_status() {
             say "  forwarding tailscale -> wan: нет"
         fi
 
-        ST="$(tailscale status 2>/dev/null | head -n 3)"
+        ST="$(tailscale status 2>/dev/null)"
         if [ -n "$ST" ]; then
-            say "  tailnet:"
-            printf '%s\n' "$ST" | sed 's/^/    /'
+            TOTAL="$(printf '%s\n' "$ST" | wc -l | tr -d ' ')"
+            say "  tailscale status (первые 10 из $TOTAL):"
+            printf '%s\n' "$ST" | head -n 10 | sed 's/^/    /'
+            if [ "$TOTAL" -gt 10 ]; then
+                say "    … ещё $((TOTAL - 10)); полностью: tailscale status"
+            fi
         else
             say "  tailnet: не подключён (нужен tailscale up)"
         fi
