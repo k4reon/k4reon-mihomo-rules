@@ -29,6 +29,7 @@ set -u
 
 DRY_RUN=0
 ASSUME_YES=0
+STATUS_ONLY=0
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ОШИБКА: %s\n' "$*"; exit 1; }
@@ -37,6 +38,7 @@ for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=1 ;;
         --yes|-y)  ASSUME_YES=1 ;;
+        --status)  STATUS_ONLY=1 ;;
         --help|-h)
             sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
@@ -45,7 +47,7 @@ for arg in "$@"; do
 done
 
 [ -f /etc/openwrt_release ] || die "не похоже на OpenWrt."
-[ "$(id -u)" = "0" ] || [ "$DRY_RUN" -eq 1 ] || die "нужны права root."
+[ "$(id -u)" = "0" ] || [ "$DRY_RUN" -eq 1 ] || [ "$STATUS_ONLY" -eq 1 ] || die "нужны права root."
 
 PM=""
 if command -v apk >/dev/null 2>&1; then
@@ -99,6 +101,62 @@ find_zone() {
 find_forwarding() {
     uci show firewall 2>/dev/null | sed -n "s/^firewall\.\([^.=]*\)\.src='tailscale'$/\1/p" | head -n1
 }
+
+check_status() {
+    say ""
+    if command -v tailscale >/dev/null 2>&1 && [ -x /usr/sbin/tailscaled ]; then
+        say "Tailscale: установлен ($(tailscale version 2>/dev/null | head -n1))"
+
+        if /etc/init.d/tailscale enabled >/dev/null 2>&1; then
+            say "  автозапуск: включён"
+        else
+            say "  автозапуск: выключен"
+        fi
+
+        if pidof tailscaled >/dev/null 2>&1; then
+            say "  процесс: запущен (pid $(pidof tailscaled | awk '{print $1}'))"
+        else
+            say "  процесс: не запущен"
+        fi
+
+        if uci -q get network.tailscale >/dev/null 2>&1; then
+            say "  интерфейс network.tailscale: есть"
+        else
+            say "  интерфейс network.tailscale: нет"
+        fi
+
+        Z="$(find_zone)"
+        if [ -n "$Z" ]; then
+            say "  зона firewall tailscale: есть ($Z)"
+        else
+            say "  зона firewall tailscale: нет"
+        fi
+
+        F="$(find_forwarding)"
+        if [ -n "$F" ]; then
+            say "  forwarding tailscale -> wan: есть ($F)"
+        else
+            say "  forwarding tailscale -> wan: нет"
+        fi
+
+        ST="$(tailscale status 2>/dev/null | head -n 3)"
+        if [ -n "$ST" ]; then
+            say "  tailnet:"
+            printf '%s\n' "$ST" | sed 's/^/    /'
+        else
+            say "  tailnet: не подключён (нужен tailscale up)"
+        fi
+    else
+        say "Tailscale: не установлен"
+        say "  Установить: пункт 1."
+    fi
+    say ""
+}
+
+if [ "$STATUS_ONLY" -eq 1 ]; then
+    check_status
+    exit 0
+fi
 
 configure() {
     say ""
@@ -206,14 +264,14 @@ say ""
 while :; do
     say "Что сделать?"
     say "  1) Установить Tailscale и настроить интерфейс/firewall"
-    say "  2) Только настроить интерфейс/firewall"
+    say "  2) Проверить, установлен ли Tailscale"
     say "  0) Выйти"
     printf 'Выбор [1]: '
     read choice
 
     case "$choice" in
         ""|1) install_pkg; configure; break ;;
-        2)    configure; break ;;
+        2)    check_status; continue ;;
         0)    say "Выход."; exit 0 ;;
         *)    say "Введите 1, 2 или 0." ;;
     esac

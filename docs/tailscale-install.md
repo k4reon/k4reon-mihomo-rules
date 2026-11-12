@@ -55,18 +55,23 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 
 Что сделать?
   1) Установить Tailscale и настроить интерфейс/firewall
-  2) Только настроить интерфейс/firewall
+  2) Проверить, установлен ли Tailscale
   0) Выйти
 ```
 
 При выборе 1 — скрипт все установит и настроит. В конце напишет:
 `Дальше подключитесь сами: tailscale up`.
 
+Пункт 2 (или `--status`) ничего не меняет — показывает: установлен ли
+пакет, включён ли автозапуск, запущен ли процесс, есть ли интерфейс,
+зона и forwarding, и статус tailnet.
+
 ## Без вопросов
 
 ```sh
 sh /tmp/tailscale-install.sh --yes       # установить и настроить
 sh /tmp/tailscale-install.sh --dry-run   # только показать план
+sh /tmp/tailscale-install.sh --status    # проверить, установлен ли Tailscale
 ```
 
 ## Проверено
