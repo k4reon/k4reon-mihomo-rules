@@ -69,7 +69,7 @@ configs/     ssclash-go/ и ssclash-4/ — полные конфиги PROXY и 
 dist/        готовые k4reon-*.mrs и classical-*.txt
 dist/lists/  полные объединённые списки в читаемом .txt
 rules/       локальные добавления по категориям + denylist
-scripts/     merge.py — слияние и фильтрация
+scripts/     merge.py — слияние и фильтрация; memory-limit.sh — память SSClash-Go
 sources.json откуда брать публичные списки
 build.ps1 / build.sh
 ```
@@ -450,6 +450,58 @@ configs/ssclash-go/DIRECT.yaml  → test is successful
 configs/ssclash-4/PROXY.yaml    → test is successful
 configs/ssclash-4/DIRECT.yaml   → test is successful
 ```
+
+## Память на слабых роутерах
+
+Mihomo — Go-приложение: под нагрузкой (много соединений, торренты, игры)
+оно постепенно занимает больше памяти. На роутерах с 128–256 МБ это
+заметно. Go-рантайм можно ограничить двумя переменными:
+
+| Переменная | Что делает | По умолчанию |
+|---|---|---|
+| `GOGC` | как часто запускать сборщик мусора; меньше — чаще GC, меньше памяти | 100 |
+| `GOMEMLIMIT` | мягкий лимит памяти Go: при приближении GC работает агрессивнее | нет |
+
+`GOMEMLIMIT` — **не жёсткий лимит RSS**: он не гарантирует, что процесс
+не превысит значение, а лишь подсказывает рантайму, когда убираться
+активнее.
+
+### Скрипт
+
+`scripts/memory-limit.sh` добавляет переменные в procd-окружение SSClash-Go,
+делает бэкап init-скрипта и перезапускает службу. Только OpenWrt.
+
+```sh
+wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/memory-limit.sh
+sh /tmp/memory-limit.sh --dry-run    # посмотреть, что изменится
+sh /tmp/memory-limit.sh              # применить (auto: GOGC=75, 25% RAM)
+sh /tmp/memory-limit.sh 50 96MiB     # свои значения
+sh /tmp/memory-limit.sh --restore    # вернуть исходный init-скрипт
+```
+
+Автоматический расчёт: `GOMEMLIMIT` = 25% ОЗУ, но не меньше 64 MiB
+и не больше 256 MiB.
+
+### Значения по объёму RAM
+
+| RAM | GOGC | GOMEMLIMIT |
+|---|---:|---|
+| 128 МБ | 50 | 64–80 MiB |
+| 256 МБ | 50–75 | 96–128 MiB |
+| 512 МБ | 75 | 160–192 MiB |
+| 1 ГБ | 75–100 | 192–256 MiB |
+
+Пример: GL-MT6000 (1 ГБ) — mihomo занимает около 84 МБ RSS, настройка
+не обязательна, но полезна как страховка при большом числе соединений.
+
+### Важно
+
+- обновление SSClash-Go заменяет `/etc/init.d/ssclash` — настройку нужно
+  применить заново (скрипт идемпотентен);
+- перезапуск службы кратко прерывает соединения;
+- слишком низкий `GOMEMLIMIT` вызывает частый GC: растёт CPU, возможны
+  просадки скорости, поэтому не ставьте меньше 64 MiB;
+- идея и базовая реализация — [F5GO-Mihomo-stuff](https://github.com/F5GO/F5GO-Mihomo-stuff) (MIT).
 
 ## Дисклеймер
 
