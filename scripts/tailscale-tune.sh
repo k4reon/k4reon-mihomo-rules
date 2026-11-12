@@ -145,8 +145,6 @@ apply_changes() {
         say "tailscaled пока не найден (проверьте: pgrep -af tailscaled)."
     fi
     say ""
-    tailscale status 2>/dev/null | head -n 5 || true
-    say ""
     say "Откатить: sh $0 --restore"
 }
 
