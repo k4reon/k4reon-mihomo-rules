@@ -56,11 +56,14 @@ MEM_KB="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null)"
 MEM_MB=$(( ${MEM_KB:-0} / 1024 ))
 
 if [ "$MEM_MB" -ge 512 ]; then
-    TS_REC="обычно не требуется: памяти достаточно."
+    TS_REC_SHORT="обычно не требуется"
+    TS_REC_DETAIL="Памяти достаточно, настройка не обязательна."
 elif [ "$MEM_MB" -ge 192 ]; then
-    TS_REC="рекомендуется: Tailscale занимает ~100 МБ."
+    TS_REC_SHORT="рекомендуется"
+    TS_REC_DETAIL="Tailscale занимает ~100 МБ."
 else
-    TS_REC="обязательно: Tailscale занимает слишком большую часть ОЗУ."
+    TS_REC_SHORT="обязательно"
+    TS_REC_DETAIL="Tailscale занимает слишком большую часть ОЗУ."
 fi
 
 # ---- изменение -------------------------------------------------
@@ -183,9 +186,10 @@ if [ "$DRY_RUN" -eq 1 ] || [ "$ASSUME_YES" -eq 1 ]; then
 fi
 
 if [ ! -t 0 ]; then
-    say "Tailscale tuning"
-    say "ОЗУ роутера:   $MEM_MB MiB"
-    say "Совет:         $TS_REC"
+    say "Tailscale: настройка ОЗУ"
+    say "ОЗУ роутера: $MEM_MB MiB"
+    say "Совет: $TS_REC_SHORT"
+    say "$TS_REC_DETAIL"
     say "Добавит: TS_NO_LOGS_NO_SUPPORT=true, GOMEMLIMIT=35MiB, GODEBUG=madvdontneed=1"
     say ""
     say "Запустите интерактивно или укажите:"
@@ -196,11 +200,12 @@ fi
 # ---- интерактивное меню ---------------------------------------
 
 say "========================================"
-say " Tailscale: настройка"
+say " Tailscale: настройка ОЗУ"
 say "========================================"
 say " init: $INIT"
 say " ОЗУ роутера: $MEM_MB MiB"
-say " Совет: $TS_REC"
+say " Совет: $TS_REC_SHORT"
+say " $TS_REC_DETAIL"
 say ""
 while :; do
     say "Что сделать?"
