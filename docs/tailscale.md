@@ -46,7 +46,7 @@ wget -O /tmp/tailscale-tune.sh https://raw.githubusercontent.com/k4reon/k4reon-m
   1) Применить (без логов, GOMEMLIMIT=35MiB, GODEBUG)
   2) Откатить
   0) Выйти
-Выбор [1]:
+Выбор:
 ```
 
 Enter — применить. Скрипт сделает бэкап `/etc/init.d/tailscale.bak`,
