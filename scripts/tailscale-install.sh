@@ -30,6 +30,7 @@ set -u
 DRY_RUN=0
 ASSUME_YES=0
 STATUS_ONLY=0
+STOP_ONLY=0
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ОШИБКА: %s\n' "$*"; exit 1; }
@@ -39,6 +40,7 @@ for arg in "$@"; do
         --dry-run) DRY_RUN=1 ;;
         --yes|-y)  ASSUME_YES=1 ;;
         --status)  STATUS_ONLY=1 ;;
+        --stop)    STOP_ONLY=1 ;;
         --help|-h)
             sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
@@ -158,6 +160,50 @@ if [ "$STATUS_ONLY" -eq 1 ]; then
     exit 0
 fi
 
+stop_and_logout() {
+    say ""
+    if ! command -v tailscale >/dev/null 2>&1; then
+        say "Tailscale не установлен — останавливать нечего."
+        return 0
+    fi
+
+    say "ВНИМАНИЕ: Tailscale будет остановлен и выполнен logout."
+    say "Устройство пропадёт из tailnet до следующего 'tailscale up'."
+    if [ "$ASSUME_YES" -eq 0 ]; then
+        if [ ! -t 0 ]; then
+            say "Нужно подтверждение: запустите интерактивно или добавьте --yes."
+            return 0
+        fi
+        printf 'Продолжить? [y/N]: '
+        read ans
+        case "$ans" in
+            y|Y|yes|да|Да) ;;
+            *) say "Отменено."; return 0 ;;
+        esac
+    fi
+
+    [ "$(id -u)" = "0" ] || die "нужны права root."
+
+    say "Logout..."
+    tailscale logout 2>/dev/null || say "  (logout не выполнен: возможно, уже выполнен)"
+
+    say "Остановка службы..."
+    /etc/init.d/tailscale stop || say "  служба не остановлена"
+
+    sleep 2
+    if pidof tailscaled >/dev/null 2>&1; then
+        say "Процесс всё ещё запущен (pid $(pidof tailscaled | awk '{print $1}'))."
+    else
+        say "Tailscale остановлен, logout выполнен."
+    fi
+    say ""
+}
+
+if [ "$STOP_ONLY" -eq 1 ]; then
+    stop_and_logout
+    exit 0
+fi
+
 configure() {
     say ""
     say "Настройка интерфейса и firewall:"
@@ -265,6 +311,7 @@ while :; do
     say "Что сделать?"
     say "  1) Установить Tailscale и настроить интерфейс/firewall"
     say "  2) Проверить, установлен ли Tailscale"
+    say "  3) Остановить Tailscale и выйти (logout)"
     say "  0) Выйти"
     printf 'Выбор: '
     read choice
@@ -272,8 +319,9 @@ while :; do
     case "$choice" in
         ""|1) install_pkg; configure; break ;;
         2)    check_status; continue ;;
+        3)    stop_and_logout; break ;;
         0)    say "Выход."; exit 0 ;;
-        *)    say "Введите 1, 2 или 0." ;;
+        *)    say "Введите 1, 2, 3 или 0." ;;
     esac
 done
 

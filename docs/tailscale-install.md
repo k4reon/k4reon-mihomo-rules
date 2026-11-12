@@ -56,6 +56,7 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 Что сделать?
   1) Установить Tailscale и настроить интерфейс/firewall
   2) Проверить, установлен ли Tailscale
+  3) Остановить Tailscale и выйти (logout)
   0) Выйти
 ```
 
@@ -66,12 +67,17 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 пакет, включён ли автозапуск, запущен ли процесс, есть ли интерфейс,
 зона и forwarding, и статус tailnet.
 
+Пункт 3 — остановить Tailscale и выполнить logout. Сначала выводится
+предупреждение, что устройство пропадёт из tailnet, и запрос `[y/N]`.
+Только после `y` выполняется `tailscale logout` и остановка службы.
+
 ## Без вопросов
 
 ```sh
 sh /tmp/tailscale-install.sh --yes       # установить и настроить
 sh /tmp/tailscale-install.sh --dry-run   # только показать план
 sh /tmp/tailscale-install.sh --status    # проверить, установлен ли Tailscale
+sh /tmp/tailscale-install.sh --stop --yes  # остановить и выйти (logout)
 ```
 
 ## Проверено
