@@ -8,6 +8,11 @@
 - `MATCH,PROXY` — всё неизвестное идёт в прокси;
 - `MATCH,DIRECT` — всё неизвестное идёт напрямую, в прокси только сервисы.
 
+![SSClash-Go: профиль k4reon-proxy](docs/images/ssclash-ui.png)
+
+<sub>SSClash-Go 7.6.0, профиль `k4reon-proxy`: конфиг целиком редактируется
+и проверяется в веб-интерфейсе роутера.</sub>
+
 ## Идея
 
 Один набор правил и два профиля, которые автор использует на своих
@@ -33,7 +38,7 @@ https://ssclash.notion.site/Mihomo-SSClash-15989188f6b48051a97fc887adea736a
 | ads | 131 | — | REJECT |
 | ru | 1886 | — | DIRECT |
 | ru-classical | 11 TLD | — | DIRECT |
-| torrent | 490 | — | DIRECT |
+| torrent | 491 | — | DIRECT |
 | youtube | 179 | 2 | YouTube |
 | games | 942 | 63 | Games |
 | discord | 29 | 1 | Discord |
@@ -43,14 +48,21 @@ https://ssclash.notion.site/Mihomo-SSClash-15989188f6b48051a97fc887adea736a
 | social | 609 | 23 | Fast |
 | custom | 28 | — | PROXY / DIRECT |
 
-Итого около 5720 доменов и 134 CIDR.
+Итого около 5733 доменов и 134 CIDR.
+
+Полные объединённые списки по каждой категории лежат в `dist/lists/`
+(`k4reon-<категория>-domains.txt` и `k4reon-<категория>-ip.txt`).
+В репозитории также остаются `rules/<категория>/*.txt` — это только
+локальные добавления поверх публичных источников; итоговый список
+получается их слиянием при сборке.
 
 ## Структура
 
 ```
 configs/     ssclash-go/ и ssclash-4/ — полные конфиги PROXY и DIRECT
 dist/        готовые k4reon-*.mrs и classical-*.txt
-rules/       исходные списки по категориям + denylist
+dist/lists/  полные объединённые списки в читаемом .txt
+rules/       локальные добавления по категориям + denylist
 scripts/     merge.py — слияние и фильтрация
 sources.json откуда брать публичные списки
 build.ps1 / build.sh

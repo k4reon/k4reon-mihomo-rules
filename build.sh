@@ -77,6 +77,20 @@ find "$ROOT/rules" -mindepth 2 -maxdepth 2 -type f -name '*.txt' \
     cp "$f" "$DIST/k4reon-$g-$(basename "$f")"
   done
 
+# --- 5. publish readable full lists (merged, not just local additions) ---
+rm -rf "$DIST/lists"
+mkdir -p "$DIST/lists"
+for f in "$BUILD"/*-domains.txt; do
+  [ -e "$f" ] || continue
+  g="$(basename "$f" -domains.txt)"
+  cp "$f" "$DIST/lists/k4reon-$g-domains.txt"
+done
+for f in "$BUILD"/*-ip.txt; do
+  [ -e "$f" ] || continue
+  g="$(basename "$f" -ip.txt)"
+  cp "$f" "$DIST/lists/k4reon-$g-ip.txt"
+done
+
 echo
 echo "Built files:"
 ls -l "$DIST"

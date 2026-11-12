@@ -66,6 +66,19 @@ Get-ChildItem (Join-Path $root 'rules') -Directory | ForEach-Object {
     }
 }
 
+# --- 5. publish readable full lists (merged, not just local additions) ---
+$lists = Join-Path $dist 'lists'
+Remove-Item $lists -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $lists | Out-Null
+Get-ChildItem $build -Filter '*-domains.txt' | ForEach-Object {
+    $g = $_.BaseName -replace '-domains$', ''
+    Copy-Item $_.FullName (Join-Path $lists "k4reon-$g-domains.txt") -Force
+}
+Get-ChildItem $build -Filter '*-ip.txt' | ForEach-Object {
+    $g = $_.BaseName -replace '-ip$', ''
+    Copy-Item $_.FullName (Join-Path $lists "k4reon-$g-ip.txt") -Force
+}
+
 Write-Host ''
 Write-Host 'Built files:'
 Get-ChildItem $dist | Sort-Object Name | ForEach-Object {
