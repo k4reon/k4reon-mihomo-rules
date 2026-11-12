@@ -65,7 +65,7 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 
 Пункт 2 (или `--status`) ничего не меняет — показывает: установлен ли
 пакет, включён ли автозапуск, запущен ли процесс, есть ли интерфейс,
-зона и forwarding, и статус tailnet.
+зона и forwarding, и подключён ли tailnet (без списка устройств).
 
 Пункт 3 — остановить Tailscale и выполнить logout. Сначала выводится
 предупреждение, что устройство пропадёт из tailnet, и запрос `[y/N]`.
