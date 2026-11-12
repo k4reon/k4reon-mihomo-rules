@@ -70,6 +70,30 @@ sh /tmp/tailscale-install.sh --yes       # установить и настро�
 sh /tmp/tailscale-install.sh --dry-run   # только показать план
 ```
 
+## Проверено
+
+Чистый OpenWrt 25.12.6 (`apk`), пакет `tailscale` 1.104.1:
+
+- `apk` определился автоматически, вместе с пакетом поставился `kmod-tun`;
+- интерфейс, зона и forwarding созданы с первого запуска;
+- ошибок нет.
+
+В логе установки могут появляться строки — это нормально:
+
+- `Program starting ... --cleanup` — штатный post-install пакета;
+- `linuxfw: clear iptables: executable file not found` — на 24/25 firewall
+  на nftables, чистить iptables нечего;
+- `failed to look up link "tailscale0": Link not found` — интерфейс появится
+  после первого `tailscale up`.
+
+После настройки:
+
+```sh
+tailscale up
+tailscale status
+ip link show tailscale0
+```
+
 ## Важно
 
 - скрипт **идемпотентен**: если интерфейс, зона или forwarding уже есть,
