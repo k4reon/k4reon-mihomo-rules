@@ -163,7 +163,7 @@ stop_and_logout() {
     say ""
     if ! command -v tailscale >/dev/null 2>&1; then
         say "Tailscale не установлен — останавливать нечего."
-        return 0
+        return 1
     fi
 
     say "ВНИМАНИЕ: Tailscale будет остановлен и выполнен logout."
@@ -171,13 +171,13 @@ stop_and_logout() {
     if [ "$ASSUME_YES" -eq 0 ]; then
         if [ ! -t 0 ]; then
             say "Нужно подтверждение: запустите интерактивно или добавьте --yes."
-            return 0
+            return 1
         fi
         printf 'Продолжить? [y/N]: '
         read ans
         case "$ans" in
             y|Y|yes|да|Да) ;;
-            *) say "Отменено."; return 0 ;;
+            *) say "Отменено."; return 1 ;;
         esac
     fi
 
@@ -196,11 +196,15 @@ stop_and_logout() {
         say "Tailscale остановлен, logout выполнен."
     fi
     say ""
+    return 0
 }
 
 if [ "$STOP_ONLY" -eq 1 ]; then
-    stop_and_logout
-    exit 0
+    if stop_and_logout; then
+        exit 0
+    else
+        exit 1
+    fi
 fi
 
 configure() {
@@ -316,13 +320,16 @@ while :; do
     read choice
 
     case "$choice" in
-        ""|1) install_pkg; configure; break ;;
+        ""|1)
+            install_pkg
+            configure
+            say ""
+            say "Дальше подключитесь сами: tailscale up"
+            break
+            ;;
         2)    check_status; continue ;;
-        3)    stop_and_logout; break ;;
+        3)    if stop_and_logout; then break; else continue; fi ;;
         0)    say "Выход."; exit 0 ;;
         *)    say "Введите 1, 2, 3 или 0." ;;
     esac
 done
-
-say ""
-say "Дальше подключитесь сами: tailscale up"
