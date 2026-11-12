@@ -70,9 +70,13 @@ dist/        готовые k4reon-*.mrs и classical-*.txt
 dist/lists/  полные объединённые списки в читаемом .txt
 rules/       локальные добавления по категориям + denylist
 scripts/     merge.py — слияние и фильтрация; memory-limit.sh — память SSClash-Go
+docs/        ssclash-notion.md — гайд, ssclash-remove.md — удаление SSClash
 sources.json откуда брать публичные списки
 build.ps1 / build.sh
 ```
+
+Памятки: `docs/ssclash-notion.md` — настройка SSClash-Go/4, `docs/ssclash-remove.md` —
+полное удаление SSClash-Go (OpenWrt/Keenetic) и SSClash legacy (OpenWrt).
 
 `configs/ssclash-go/*.yaml` — полные конфиги в стиле SSClash-Go: tproxy,
 DNS, sniffer, proxy-providers, группы `fallback`/`url-test`/`select`,
