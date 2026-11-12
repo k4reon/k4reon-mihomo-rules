@@ -472,16 +472,27 @@ Mihomo — Go-приложение: под нагрузкой (много сое
 
 ### Скрипт
 
-`scripts/memory-limit.sh` добавляет переменные в procd-окружение SSClash-Go,
-делает бэкап init-скрипта и перезапускает службу. Только OpenWrt.
+Файл в репозитории: [`scripts/memory-limit.sh`](scripts/memory-limit.sh).
+
+Скрипт добавляет переменные в procd-окружение SSClash-Go, делает бэкап
+init-скрипта и перезапускает службу. Только OpenWrt.
+
+Скачать на роутер и запустить (OpenWrt):
 
 ```sh
-wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/memory-limit.sh
-sh /tmp/memory-limit.sh --dry-run    # посмотреть, что изменится
-sh /tmp/memory-limit.sh              # применить (auto: GOGC=75, 25% RAM)
-sh /tmp/memory-limit.sh 50 96MiB     # свои значения
-sh /tmp/memory-limit.sh --restore    # вернуть исходный init-скрипт
+cd /tmp
+wget -O memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/memory-limit.sh
+
+sh memory-limit.sh --dry-run    # посмотреть, что изменится
+sh memory-limit.sh              # применить (auto: GOGC=75, 25% RAM)
+sh memory-limit.sh 50 96MiB     # свои значения
+sh memory-limit.sh --restore    # вернуть исходный init-скрипт
 ```
+
+Обратите внимание: `scripts/memory-limit.sh` — это путь **внутри репозитория**.
+На роутере скрипт лежит там, куда вы его скачали, поэтому запуск —
+`sh /tmp/memory-limit.sh` (или `sh memory-limit.sh` из `/tmp`), а не
+`scripts/memory-limit.sh`.
 
 Автоматический расчёт: `GOMEMLIMIT` = 25% ОЗУ, но не меньше 64 MiB
 и не больше 256 MiB.
