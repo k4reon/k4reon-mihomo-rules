@@ -4,6 +4,8 @@
 
 # mihomo rules for Russian home routers
 
+[![build-mrs](https://github.com/k4reon/k4reon-mihomo-rules/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/k4reon/k4reon-mihomo-rules/actions/workflows/build.yml)
+
 Это рабочая база правил mihomo для домашних роутеров в России.
 Конфигурация собрана и используется автором репозитория на своих
 роутерах, а также публикуется для всех. В репозитории два профиля
