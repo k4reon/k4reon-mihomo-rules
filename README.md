@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/ssclash-logo.png" alt="SSClash — Super Simple Clash" width="180">
+</p>
+
 # mihomo rules for Russian home routers
 
 Это рабочая база правил mihomo для домашних роутеров в России.
