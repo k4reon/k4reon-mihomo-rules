@@ -6,6 +6,12 @@
 
 [![build-mrs](https://github.com/k4reon/mihomo-rules-ru/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/k4reon/mihomo-rules-ru/actions/workflows/build.yml)
 
+![GitHub](https://img.shields.io/badge/GitHub-mihomo--rules--ru-black?style=for-the-badge&logo=github)
+![OpenWrt](https://img.shields.io/badge/OpenWrt-Latest-blue?style=for-the-badge&logo=openwrt)
+![Mihomo](https://img.shields.io/badge/Mihomo-Clash.Meta-9cf?style=for-the-badge)
+![Format](https://img.shields.io/badge/Format-MRS%20%2B%20YAML-red?style=for-the-badge&logo=yaml)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
 Это рабочая база правил mihomo для домашних роутеров в России.
 Конфигурация собрана и используется автором репозитория на своих
 роутерах, а также публикуется для всех. В репозитории два профиля
