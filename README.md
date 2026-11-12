@@ -492,39 +492,42 @@ free -m
 
 Все команды выполняются **на роутере по SSH от root**.
 
-**Шаг 1. Скачать скрипт.**
+Одна команда — скачает скрипт и сразу запустит его:
 
 ```sh
-cd /tmp
-wget -O memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/memory-limit.sh
+wget -O /tmp/memory-limit.sh https://raw.githubusercontent.com/k4reon/mihomo-rules-ru/main/scripts/memory-limit.sh && sh /tmp/memory-limit.sh
 ```
 
-**Шаг 2. Посмотреть, что изменится.** Ничего не меняет, только показывает diff.
+Дальше скрипт сам всё спросит:
+
+```
+========================================
+ SSClash-Go: настройка памяти
+========================================
+ ОЗУ роутера:  986 MiB
+ Рекомендуется: GOGC=75, GOMEMLIMIT=246MiB
+
+Что сделать?
+  1) Применить рекомендуемые значения
+  2) Указать свои значения
+  3) Откатить (убрать настройку)
+  0) Выйти
+Выбор [1]:
+```
+
+Enter — применить рекомендованное. Скрипт сделает бэкап, перезапустит
+SSClash и покажет итоговые переменные и текущий RSS.
+
+### Без вопросов
 
 ```sh
-sh memory-limit.sh --dry-run
+sh /tmp/memory-limit.sh --yes        # применить рекомендуемые
+sh /tmp/memory-limit.sh 50 96MiB     # свои значения
+sh /tmp/memory-limit.sh --dry-run    # показать diff, ничего не менять
+sh /tmp/memory-limit.sh --restore    # откатить
 ```
 
-**Шаг 3. Применить.** Скрипт сам подберёт лимит — 25% ОЗУ, но не меньше
-64 MiB и не больше 256 MiB — сделает бэкап и перезапустит SSClash.
-
-```sh
-sh memory-limit.sh
-```
-
-**Шаг 4. Проверить результат** (необязательно).
-
-```sh
-cat /proc/$(pgrep -f '^/opt/clash/bin/clash')/environ | tr '\0' '\n' | grep -E 'GOGC|GOMEMLIMIT'
-```
-
-### Свои значения
-
-```sh
-sh memory-limit.sh 50 96MiB    # GOGC=50, GOMEMLIMIT=96MiB
-```
-
-Ориентиры:
+Ориентиры для своих значений:
 
 | RAM | GOGC | GOMEMLIMIT |
 |---|---:|---|
@@ -535,14 +538,6 @@ sh memory-limit.sh 50 96MiB    # GOGC=50, GOMEMLIMIT=96MiB
 
 Не ставьте лимит меньше 64 MiB: сборщик мусора будет работать почти
 постоянно, вырастет нагрузка на CPU и появятся просадки скорости.
-
-### Как отменить
-
-```sh
-sh memory-limit.sh --restore
-```
-
-Скрипт вернёт исходный `/etc/init.d/ssclash` из бэкапа и перезапустит службу.
 
 ### Важно
 
