@@ -20,6 +20,7 @@
 +.amiibo.com
 +.anthemgame.com
 +.anthemthegame.com
++.anybrain.gg
 +.apexlegends.com
 +.api-priconne-redive.cygames.jp
 +.arcraiders.com
@@ -219,6 +220,7 @@
 +.epicgames.com
 +.epicgames.dev
 +.epicgamescdn.com
++.es-pio.net
 +.escapefromtarkov.com
 +.europeanwarzoneseries.com
 +.excitebots.com
@@ -255,6 +257,7 @@
 +.gamesfirsthelsinki.com
 +.gamesplanet.com
 +.gametap.com
++.gaming-sdk.com
 +.garena.co.id
 +.garena.co.th
 +.garena.com

@@ -16,6 +16,11 @@
 185.40.232.0/22
 102.67.0.0/16
 
+# Arc Raiders (Embark) - observed match servers, UDP only via games-ip AND rule
+# 34.62.15.114 (GCP Brussels), 15.161.154.97 (AWS Milan)
+34.62.15.0/24
+15.161.154.0/24
+
 # NOTE: PoE2 instance servers are hosted on shared UCLOUD ranges
 # (e.g. 134.168.255.0/24, Moscow). Do not add them as a broad CIDR -
 # use TCP port rules in ports.yaml instead.

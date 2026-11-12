@@ -13,3 +13,9 @@ battleye.com
 pathofexile2.com
 pathofexile.com
 poecdn.com
+
+# Arc Raiders (Embark Studios)
+es-pio.net
+gaming-sdk.com
+anybrain.gg
+arcraiders.com
