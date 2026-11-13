@@ -132,7 +132,8 @@ fetch() {
     for url in "$@"; do
         rm -f "$out"
         if command -v curl >/dev/null 2>&1; then
-            curl -fsSL --connect-timeout 15 --max-time 300 -o "$out" "$url" 2>/dev/null \
+            curl -fsSL --retry 2 --connect-timeout 15 --max-time 300 \
+                --speed-limit 8192 --speed-time 25 -o "$out" "$url" 2>/dev/null \
                 && [ -s "$out" ] && return 0
         else
             wget -q -T 60 -O "$out" "$url" 2>/dev/null \
