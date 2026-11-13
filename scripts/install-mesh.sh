@@ -322,7 +322,7 @@ uninstall_roamd() {
     say "ВНИМАНИЕ: будут удалены roamd, LuCI-приложение и перевод."
     say "Настройки Wi-Fi и сам конфиг /etc/config/roamd не затрагиваются"
     say "(конфиг спросим отдельно)."
-    if [ "$ASSUME_YES" -eq 0 ]; then
+    if [ "$ASSUME_YES" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
         if [ ! -t 0 ]; then
             say "Нужно подтверждение: запустите интерактивно или добавьте --yes."
             return 1
