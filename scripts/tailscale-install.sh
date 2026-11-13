@@ -14,12 +14,19 @@
 #  Подключение к tailnet скрипт не делает — после настройки выполните
 #  tailscale up вручную (или подключитесь как обычно по SSH).
 #
+#  Дополнительно: настройка памяти Tailscale (GOGC/GOMEMLIMIT/GODEBUG)
+#  и остановка с logout.
+#
 #  Запуск (дальше скрипт спросит):
 #    sh tailscale-install.sh
 #
 #  Без вопросов:
-#    sh tailscale-install.sh --yes
-#    sh tailscale-install.sh --dry-run    # только показать план
+#    sh tailscale-install.sh --yes         # установить и настроить
+#    sh tailscale-install.sh --dry-run     # только показать план
+#    sh tailscale-install.sh --status      # состояние
+#    sh tailscale-install.sh --tune        # настроить память
+#    sh tailscale-install.sh --tune-restore  # вернуть init-скрипт
+#    sh tailscale-install.sh --stop --yes  # остановить и logout
 #
 #  Только OpenWrt. Скрипт идемпотентен: уже созданные интерфейс,
 #  зона и forwarding не дублируются.
@@ -31,6 +38,8 @@ DRY_RUN=0
 ASSUME_YES=0
 STATUS_ONLY=0
 STOP_ONLY=0
+TUNE_ONLY=0
+TUNE_RESTORE=0
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ОШИБКА: %s\n' "$*"; exit 1; }
@@ -41,8 +50,10 @@ for arg in "$@"; do
         --yes|-y)  ASSUME_YES=1 ;;
         --status)  STATUS_ONLY=1 ;;
         --stop)    STOP_ONLY=1 ;;
+        --tune)    TUNE_ONLY=1 ;;
+        --tune-restore) TUNE_RESTORE=1 ;;
         --help|-h)
-            sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
     esac
@@ -139,6 +150,13 @@ check_status() {
             say "  forwarding tailscale -> wan: есть ($F)"
         else
             say "  forwarding tailscale -> wan: нет"
+        fi
+
+        if grep -q 'procd_append_param env GOMEMLIMIT=' /etc/init.d/tailscale 2>/dev/null; then
+            LIM="$(sed -n 's/.*GOMEMLIMIT="\{0,1\}\([^" ]*\)"\{0,1\}.*/\1/p' /etc/init.d/tailscale | head -n1)"
+            say "  память: настроена (GOMEMLIMIT=$LIM)"
+        else
+            say "  память: не настроена"
         fi
 
         ST="$(tailscale status --peers=false 2>/dev/null | head -n 1)"
@@ -275,6 +293,137 @@ configure() {
     say "Готово."
 }
 
+# ---------------- память -----------------------------------------
+
+TUNE_INIT="/etc/init.d/tailscale"
+TUNE_BACKUP="$TUNE_INIT.bak"
+
+tune_calc() {
+    MEM_KB="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null)"
+    tune_mem=$(( ${MEM_KB:-0} / 1024 ))
+    TUNE_MEM_MB="$tune_mem"
+    auto=$(( tune_mem / 4 ))
+    [ "$auto" -lt 64 ] && auto=64
+    [ "$auto" -gt 256 ] && auto=256
+    [ "$tune_mem" -eq 0 ] && auto=128
+    TUNE_LIMIT="${auto}MiB"
+}
+
+tune_apply() {
+    say ""
+    [ -f "$TUNE_INIT" ] || { say "Не найден $TUNE_INIT — сначала установите Tailscale."; return 1; }
+    grep -q 'TS_DEBUG_FIREWALL_MODE' "$TUNE_INIT" || { say "$TUNE_INIT не похож на init-скрипт Tailscale."; return 1; }
+
+    tune_calc
+    TMP="$(mktemp 2>/dev/null || echo "/tmp/tailscale-tune.$$")"
+
+    grep -v -E 'procd_append_param env (GOMEMLIMIT|GODEBUG)=' "$TUNE_INIT" > "$TMP" \
+        || { say "Не удалось прочитать $TUNE_INIT."; return 1; }
+
+    if grep -q 'procd_append_param env TS_NO_LOGS_NO_SUPPORT=' "$TMP"; then
+        PREVIEW="  procd_append_param env GOMEMLIMIT=$TUNE_LIMIT
+  procd_append_param env GODEBUG=madvdontneed=1"
+        awk -v gomem="$TUNE_LIMIT" '
+            /procd_append_param env TS_NO_LOGS_NO_SUPPORT=/ {
+                print
+                print "  procd_append_param env GOMEMLIMIT=" gomem
+                print "  procd_append_param env GODEBUG=madvdontneed=1"
+                next
+            }
+            { print }
+        ' "$TMP" > "$TMP.new" || { say "Не удалось подготовить изменения."; rm -f "$TMP"; return 1; }
+    else
+        PREVIEW="  # Disable logging to log.tailscale.com
+  procd_append_param env TS_NO_LOGS_NO_SUPPORT=true
+  procd_append_param env GOMEMLIMIT=$TUNE_LIMIT
+  procd_append_param env GODEBUG=madvdontneed=1"
+        awk -v gomem="$TUNE_LIMIT" '
+            /procd_set_param env TS_DEBUG_FIREWALL_MODE=/ {
+                print
+                print ""
+                print "  # Disable logging to log.tailscale.com"
+                print "  procd_append_param env TS_NO_LOGS_NO_SUPPORT=true"
+                print "  procd_append_param env GOMEMLIMIT=" gomem
+                print "  procd_append_param env GODEBUG=madvdontneed=1"
+                next
+            }
+            { print }
+        ' "$TMP" > "$TMP.new" || { say "Не удалось подготовить изменения."; rm -f "$TMP"; return 1; }
+    fi
+
+    say "ОЗУ роутера: $TUNE_MEM_MB MiB"
+    say "GOMEMLIMIT: $TUNE_LIMIT"
+    say ""
+    say "Будет добавлено:"
+    printf '%s\n' "$PREVIEW"
+    say ""
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "(dry-run) файл не меняется"
+        rm -f "$TMP" "$TMP.new"
+        return 0
+    fi
+
+    [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
+
+    if [ ! -f "$TUNE_BACKUP" ]; then
+        cp "$TUNE_INIT" "$TUNE_BACKUP" || { say "Не удалось создать бэкап."; return 1; }
+        say "Бэкап: $TUNE_BACKUP"
+    fi
+
+    mv "$TMP.new" "$TUNE_INIT" || { say "Не удалось записать $TUNE_INIT."; return 1; }
+    chmod 755 "$TUNE_INIT"
+    rm -f "$TMP"
+
+    say "Перезапуск Tailscale..."
+    /etc/init.d/tailscale restart || { say "Перезапуск не удался."; return 1; }
+
+    sleep 4
+    PID="$(pidof tailscaled | awk '{print $1}')"
+    if [ -n "$PID" ]; then
+        say "Переменные:"
+        tr '\0' '\n' < "/proc/$PID/environ" 2>/dev/null | grep -E '^(GOMEMLIMIT|GODEBUG)=' || true
+        grep -E 'VmRSS' "/proc/$PID/status" 2>/dev/null | sed 's/^/  /' || true
+    fi
+    say ""
+    return 0
+}
+
+tune_restore() {
+    say ""
+    [ -f "$TUNE_BACKUP" ] || { say "Бэкап не найден: $TUNE_BACKUP"; return 1; }
+    if [ "$ASSUME_YES" -eq 0 ]; then
+        if [ ! -t 0 ]; then
+            say "Нужно подтверждение: запустите интерактивно или добавьте --yes."
+            return 1
+        fi
+        printf 'Вернуть исходный init-скрипт? [y/N]: '
+        read ans
+        case "$ans" in
+            y|Y|yes|да|Да) ;;
+            *) say "Отменено."; return 1 ;;
+        esac
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "(dry-run) файл не меняется"
+        return 0
+    fi
+    [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
+    cp "$TUNE_BACKUP" "$TUNE_INIT" || { say "Не удалось восстановить."; return 1; }
+    say "Перезапуск Tailscale..."
+    /etc/init.d/tailscale restart || true
+    say "Готово: настройка памяти убрана."
+    return 0
+}
+
+if [ "$TUNE_ONLY" -eq 1 ]; then
+    if tune_apply; then exit 0; else exit 1; fi
+fi
+
+if [ "$TUNE_RESTORE" -eq 1 ]; then
+    if tune_restore; then exit 0; else exit 1; fi
+fi
+
 # ---------------- меню -------------------------------------------
 
 if [ "$ASSUME_YES" -eq 1 ]; then
@@ -314,7 +463,9 @@ while :; do
     say "Что сделать?"
     say "  1) Установить Tailscale и настроить интерфейс/firewall"
     say "  2) Проверить, установлен ли Tailscale"
-    say "  3) Остановить Tailscale и выйти (logout)"
+    say "  3) Настроить память (GOMEMLIMIT/GODEBUG)"
+    say "  4) Вернуть исходный init-скрипт (память)"
+    say "  5) Остановить Tailscale и выйти (logout)"
     say "  0) Выйти"
     printf 'Выбор: '
     read choice
@@ -328,8 +479,10 @@ while :; do
             break
             ;;
         2)    check_status; continue ;;
-        3)    if stop_and_logout; then break; else continue; fi ;;
+        3)    tune_apply; continue ;;
+        4)    tune_restore; continue ;;
+        5)    if stop_and_logout; then break; else continue; fi ;;
         0)    say "Выход."; exit 0 ;;
-        *)    say "Введите 1, 2, 3 или 0." ;;
+        *)    say "Введите 1–5 или 0." ;;
     esac
 done

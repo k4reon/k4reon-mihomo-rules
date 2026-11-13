@@ -56,7 +56,9 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 Что сделать?
   1) Установить Tailscale и настроить интерфейс/firewall
   2) Проверить, установлен ли Tailscale
-  3) Остановить Tailscale и выйти (logout)
+  3) Настроить память (GOMEMLIMIT/GODEBUG)
+  4) Вернуть исходный init-скрипт (память)
+  5) Остановить Tailscale и выйти (logout)
   0) Выйти
 ```
 
@@ -65,9 +67,15 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 
 Пункт 2 (или `--status`) ничего не меняет — показывает: установлен ли
 пакет, включён ли автозапуск, запущен ли процесс, есть ли интерфейс,
-зона и forwarding, и подключён ли tailnet (без списка устройств).
+зона и forwarding, настроена ли память и подключён ли tailnet
+(без списка устройств).
 
-Пункт 3 — остановить Tailscale и выполнить logout. Сначала выводится
+Пункт 3 (или `--tune`) ограничивает память Tailscale: добавляет
+`GOMEMLIMIT` и `GODEBUG=madvdontneed=1`, делает бэкап init-скрипта
+и перезапускает службу. Пункт 4 (или `--tune-restore`) возвращает
+исходный init из бэкапа.
+
+Пункт 5 — остановить Tailscale и выполнить logout. Сначала выводится
 предупреждение, что устройство пропадёт из tailnet, и запрос `[y/N]`.
 Только после `y` выполняется `tailscale logout` и остановка службы.
 При `N` (или любом другом ответе) — «Отменено» и возврат в меню, ничего
@@ -79,8 +87,34 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 sh /tmp/tailscale-install.sh --yes       # установить и настроить
 sh /tmp/tailscale-install.sh --dry-run   # только показать план
 sh /tmp/tailscale-install.sh --status    # проверить, установлен ли Tailscale
+sh /tmp/tailscale-install.sh --tune      # настроить память
+sh /tmp/tailscale-install.sh --tune-restore  # вернуть init из бэкапа
 sh /tmp/tailscale-install.sh --stop --yes  # остановить и выйти (logout)
 ```
+
+## Память
+
+Tailscale — Go-приложение; на роутере он занимает порядка 90–100 МБ.
+Пункт 3 (или `--tune`) добавляет в `/etc/init.d/tailscale`:
+
+| Параметр | Что делает |
+|---|---|
+| `GOMEMLIMIT` | мягкий лимит памяти Go: 25% ОЗУ, но не меньше 64 MiB и не больше 256 MiB |
+| `GODEBUG=madvdontneed=1` | агрессивнее возвращать освобождённую память ОС |
+| `TS_NO_LOGS_NO_SUPPORT=true` | не отправлять логи на log.tailscale.com (если строки ещё нет) |
+
+Когда нужно:
+
+| ОЗУ | Нужно? |
+|---|---|
+| 128–192 МБ | обязательно |
+| 256 МБ | обязательно |
+| 512 МБ | рекомендуется, если не хватает памяти |
+| 1 ГБ и больше | обычно не требуется |
+
+Скрипт показывает, что будет добавлено, делает бэкап
+`/etc/init.d/tailscale.bak`, перезапускает службу и выводит переменные
+и RSS. `GOMEMLIMIT` — мягкий лимит, RSS он жёстко не ограничивает.
 
 ## Проверено
 
@@ -114,8 +148,8 @@ ip link show tailscale0
   для настройки;
 - при установке на OpenWrt 24 используется `opkg`, на 25 — `apk`;
   имя пакета в обоих случаях `tailscale`;
-- отдельно можно ограничить память Tailscale скриптом
-  `scripts/tailscale-tune.sh` (на 256 МБ рекомендуется);
+- память настраивается там же: пункт 3 меню или `--tune`
+  (на 256 МБ обязательно); пункт 4 или `--tune-restore` — откат;
 - после установки проверка:
 
   ```sh
