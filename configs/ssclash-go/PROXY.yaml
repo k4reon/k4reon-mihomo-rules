@@ -201,8 +201,9 @@ proxy-groups:
     proxies: [DIRECT]
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Game.png
 
-  - name: Messengers    # Telegram, WhatsApp (fallback)
-    type: fallback
+  - name: Messengers    # Telegram, WhatsApp (sticky-sessions)
+    type: load-balance
+    strategy: sticky-sessions
     include-all: true
     url: http://cp.cloudflare.com/generate_204
     interval: 600
