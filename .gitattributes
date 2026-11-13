@@ -7,3 +7,6 @@
 *.md    text eol=lf
 *.txt   text eol=lf
 *.mrs   binary
+*.apk   binary
+*.ipk   binary
+*.png   binary
