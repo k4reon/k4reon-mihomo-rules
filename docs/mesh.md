@@ -31,7 +31,66 @@
 
 - свободное место во флеш-памяти — не меньше 2 МБ;
 - конфликты: если стоят `usteer` или `dawn`, скрипт откажется
-  ставить roamd, потому что они мешают друг другу.
+  ставить roamd, потому что они мешают друг другу;
+- вариант `wpad`: если стоит `wpad-basic-*`, `wpad-mini` или `wpad`
+  без SAE, скрипт предложит заменить его на `wpad-mbedtls`
+  (см. раздел ниже).
+
+## Требуется полный wpad
+
+roamd включает 802.11v и прописывает в `/etc/config/wireless`:
+
+```uci
+option bss_transition '1'
+option wnm_sleep_mode '1'
+```
+
+`wpad-basic-*` этого не умеет, и hostapd не поднимает точки доступа:
+
+```
+Line 79: unknown configuration item 'bss_transition'
+Line 80: unknown configuration item 'wnm_sleep_mode'
+hostapd.add_iface failed for phy phy0 ifname=phy0-ap0
+```
+
+Снаружи это выглядит так:
+
+- сеть создана, но в **Сеть → Беспроводная сеть** у неё «отключено»;
+- в **Сеть → Роуминг Wi-Fi** — «Радиоинтерфейсы не найдены»;
+- SSID не вещается.
+
+Нужен полный пакет **`wpad-mbedtls`**: в нём есть и 802.11v, и SAE
+(WPA3). Важно: в OpenWrt 25.12 пакет с именем просто `wpad` — это
+полный 802.1X/RADIUS-вариант **без SAE**, для режима `sae-mixed` он
+не подходит:
+
+```
+unknown configuration item 'sae_password_file'
+invalid key_mgmt 'SAE'
+```
+
+Замена:
+
+```sh
+# OpenWrt 25.12 (apk)
+apk del wpad-basic-mbedtls
+apk add wpad-mbedtls
+
+# OpenWrt 24.10 (opkg)
+opkg remove wpad-basic-mbedtls
+opkg install wpad-mbedtls
+
+/etc/init.d/wpad restart
+wifi up
+```
+
+Если замена не помогла, проверить:
+
+```sh
+iw dev                                  # должны быть phy0-ap0, phy1-ap0 с ssid
+logread | grep hostapd | tail -20       # не должно быть unknown configuration item
+ubus call network.wireless status       # "up": true, "disabled": false
+```
 
 ## Запуск
 
@@ -103,6 +162,10 @@ third_party/roamd/
 ## Проверено
 
 - GL.iNet GL-MT6000, OpenWrt 25.12.5, `aarch64_cortex-a53`, `apk`;
-- `--status` показывает пакеты, автозапуск, службу и конфиг;
+- netis NX30 V2, OpenWrt 25.12.6, `aarch64_cortex-a53`, `apk`:
+  с `wpad-basic-mbedtls` сеть создавалась, но точки доступа не
+  поднимались; после замены на `wpad-mbedtls` SSID поднялся на
+  2,4 и 5 ГГц;
+- `--status` показывает пакеты, wpad, автозапуск, службу и конфиг;
 - `--dry-run` на установленной версии отвечает «обновлять нечего»;
 - пакеты из зеркала скачиваются с правильными `sha256`.

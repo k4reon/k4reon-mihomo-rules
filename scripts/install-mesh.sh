@@ -8,10 +8,12 @@
 #
 #  Что делает:
 #    1) определяет ветку OpenWrt (24.10 или 25.12) и архитектуру;
-#    2) качает roamd, luci-app-roamd и русский перевод;
-#    3) сверяет sha256 по манифесту;
-#    4) ставит пакеты штатным apk/opkg;
-#    5) включает и перезапускает службу roamd.
+#    2) проверяет wpad: wpad-basic-* не умеет 802.11v, предлагает
+#       заменить его на полный wpad-mbedtls;
+#    3) качает roamd, luci-app-roamd и русский перевод;
+#    4) сверяет sha256 по манифесту;
+#    5) ставит пакеты штатным apk/opkg;
+#    6) включает и перезапускает службу roamd.
 #
 #  Запуск (дальше скрипт спросит):
 #    sh install-mesh.sh
@@ -43,7 +45,7 @@ for arg in "$@"; do
         --status)    STATUS_ONLY=1 ;;
         --uninstall) UNINSTALL=1 ;;
         --help|-h)
-            sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
     esac
@@ -159,6 +161,79 @@ conflicts() {
     return 0
 }
 
+wpad_variant() {
+    if [ "$PM" = "apk" ]; then
+        apk list -I 2>/dev/null \
+            | sed -n 's/^\(wpad[^ ]*\)-[0-9].*/\1/p' \
+            | head -n1
+    else
+        opkg list-installed 2>/dev/null \
+            | awk '/^wpad/ { print $1; exit }'
+    fi
+}
+
+wpad_ok() {
+    case "$1" in
+        wpad-mbedtls|wpad-openssl|wpad-wolfssl) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+ensure_wpad() {
+    variant="$(wpad_variant)"
+    if [ -z "$variant" ]; then
+        say "wpad не найден — проверьте, что установлен hostapd/wpad."
+        return 1
+    fi
+
+    if wpad_ok "$variant"; then
+        say "wpad: $variant (802.11v есть)"
+        return 0
+    fi
+
+    say ""
+    say "Сейчас установлен $variant — он без 802.11v."
+    say "roamd прописывает bss_transition и wnm_sleep_mode, и hostapd"
+    say "с таким пакетом не поднимет точки доступа: сеть останется"
+    say "«отключённой», а в Roaming будет «Радиоинтерфейсы не найдены»."
+    say "Нужен полный wpad-mbedtls: 802.11v + SAE (WPA3)."
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "[dry-run] заменить $variant на wpad-mbedtls"
+        return 0
+    fi
+
+    if [ "$ASSUME_YES" -eq 0 ]; then
+        if [ ! -t 0 ]; then
+            say "Нужно подтверждение: запустите интерактивно или добавьте --yes."
+            return 1
+        fi
+        printf 'Заменить %s на wpad-mbedtls? [Y/n]: ' "$variant"
+        read ans
+        case "$ans" in
+            n|N|no|No|нет|Нет)
+                say "Отменено: без полного wpad roamd не заработает."
+                return 1
+                ;;
+        esac
+    fi
+
+    say "Замена $variant -> wpad-mbedtls..."
+    if [ "$PM" = "apk" ]; then
+        apk del "$variant" || { say "Не удалось удалить $variant."; return 1; }
+        apk add wpad-mbedtls || { say "Не удалось поставить wpad-mbedtls."; return 1; }
+    else
+        opkg remove "$variant" || { say "Не удалось удалить $variant."; return 1; }
+        opkg install wpad-mbedtls || { say "Не удалось поставить wpad-mbedtls."; return 1; }
+    fi
+
+    /etc/init.d/wpad restart >/dev/null 2>&1 || true
+    sleep 2
+    wifi up >/dev/null 2>&1 || true
+    say "wpad-mbedtls установлен, Wi-Fi перезапущен."
+    return 0
+}
+
 show_status() {
     say ""
     say "roamd:"
@@ -178,6 +253,15 @@ show_status() {
         say "  русский перевод: установлен"
     else
         say "  русский перевод: нет"
+    fi
+
+    wp="$(wpad_variant)"
+    if [ -n "$wp" ]; then
+        if wpad_ok "$wp"; then
+            say "  wpad: $wp (802.11v есть)"
+        else
+            say "  wpad: $wp (без 802.11v — roamd не поднимет AP)"
+        fi
     fi
 
     if [ -x /etc/init.d/roamd ]; then
@@ -232,6 +316,10 @@ install_pkgs() {
     fi
 
     conflicts || return 1
+
+    if [ "$mode" = "full" ]; then
+        ensure_wpad || return 1
+    fi
 
     say ""
     say "Устройство: $(cat /tmp/sysinfo/model 2>/dev/null || echo '?')"
