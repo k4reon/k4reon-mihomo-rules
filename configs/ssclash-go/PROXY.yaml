@@ -331,7 +331,7 @@ rules:
 
   # --- Россия по IP ---
   - GEOIP,RU,DIRECT
-  - GEOIP,SU,DIRECT
+  # GEOIP,SU убран: legacy-адреса бывшего СССР практически не встречаются.
 
   # --- Всё остальное ---
   - MATCH,PROXY
