@@ -23,7 +23,8 @@
 #  Без вопросов:
 #    sh tailscale-install.sh --yes         # установить и настроить
 #    sh tailscale-install.sh --dry-run     # только показать план
-#    sh tailscale-install.sh --status      # состояние
+#    sh tailscale-install.sh --status      # состояние (включая память)
+#    sh tailscale-install.sh --mem         # только память: RSS и ОЗУ
 #    sh tailscale-install.sh --tune        # настроить память
 #    sh tailscale-install.sh --tune-restore  # вернуть init-скрипт
 #    sh tailscale-install.sh --stop --yes  # остановить и logout
@@ -40,6 +41,7 @@ STATUS_ONLY=0
 STOP_ONLY=0
 TUNE_ONLY=0
 TUNE_RESTORE=0
+MEM_ONLY=0
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ОШИБКА: %s\n' "$*"; exit 1; }
@@ -49,6 +51,7 @@ for arg in "$@"; do
         --dry-run) DRY_RUN=1 ;;
         --yes|-y)  ASSUME_YES=1 ;;
         --status)  STATUS_ONLY=1 ;;
+        --mem)     MEM_ONLY=1 ;;
         --stop)    STOP_ONLY=1 ;;
         --tune)    TUNE_ONLY=1 ;;
         --tune-restore) TUNE_RESTORE=1 ;;
@@ -60,7 +63,7 @@ for arg in "$@"; do
 done
 
 [ -f /etc/openwrt_release ] || die "не похоже на OpenWrt."
-[ "$(id -u)" = "0" ] || [ "$DRY_RUN" -eq 1 ] || [ "$STATUS_ONLY" -eq 1 ] || die "нужны права root."
+[ "$(id -u)" = "0" ] || [ "$DRY_RUN" -eq 1 ] || [ "$STATUS_ONLY" -eq 1 ] || [ "$MEM_ONLY" -eq 1 ] || die "нужны права root."
 
 PM=""
 if command -v apk >/dev/null 2>&1; then
@@ -115,6 +118,28 @@ find_forwarding() {
     uci show firewall 2>/dev/null | sed -n "s/^firewall\.\([^.=]*\)\.src='tailscale'$/\1/p" | head -n1
 }
 
+mem_report() {
+    [ -n "${1:-}" ] && say "$1"
+    TS_PID="$(pidof tailscaled 2>/dev/null | awk '{print $1}')"
+    if [ -n "$TS_PID" ]; then
+        TS_RSS="$(awk '/^VmRSS:/ {print $2}' "/proc/$TS_PID/status" 2>/dev/null)"
+        if [ -n "$TS_RSS" ]; then
+            say "  tailscaled (pid $TS_PID): $((TS_RSS / 1024)) MiB RSS"
+        else
+            say "  tailscaled (pid $TS_PID): RSS недоступен"
+        fi
+    else
+        say "  tailscaled: не запущен"
+    fi
+    awk '/^MemTotal:/ {t=$2} /^MemAvailable:/ {a=$2} END {
+        if (t > 0) printf "  ОЗУ: свободно %d MiB из %d MiB\n", a/1024, t/1024
+    }' /proc/meminfo 2>/dev/null
+}
+
+mem_tuned() {
+    grep -q 'procd_append_param env GOMEMLIMIT=' /etc/init.d/tailscale 2>/dev/null
+}
+
 check_status() {
     say ""
     if command -v tailscale >/dev/null 2>&1 && [ -x /usr/sbin/tailscaled ]; then
@@ -152,11 +177,15 @@ check_status() {
             say "  forwarding tailscale -> wan: нет"
         fi
 
-        if grep -q 'procd_append_param env GOMEMLIMIT=' /etc/init.d/tailscale 2>/dev/null; then
+        if mem_tuned; then
             LIM="$(sed -n 's/.*GOMEMLIMIT="\{0,1\}\([^" ]*\)"\{0,1\}.*/\1/p' /etc/init.d/tailscale | head -n1)"
             say "  память: настроена (GOMEMLIMIT=$LIM)"
         else
             say "  память: не настроена"
+        fi
+
+        if pidof tailscaled >/dev/null 2>&1; then
+            mem_report
         fi
 
         ST="$(tailscale status --peers=false 2>/dev/null | head -n 1)"
@@ -174,6 +203,20 @@ check_status() {
 
 if [ "$STATUS_ONLY" -eq 1 ]; then
     check_status
+    exit 0
+fi
+
+if [ "$MEM_ONLY" -eq 1 ]; then
+    say ""
+    say "Память Tailscale:"
+    mem_report
+    if mem_tuned; then
+        LIM="$(sed -n 's/.*GOMEMLIMIT="\{0,1\}\([^" ]*\)"\{0,1\}.*/\1/p' /etc/init.d/tailscale | head -n1)"
+        say "  настройка: применена (GOMEMLIMIT=$LIM)"
+    else
+        say "  настройка: не применена"
+    fi
+    say ""
     exit 0
 fi
 
@@ -354,6 +397,9 @@ tune_apply() {
     say "ОЗУ роутера: $TUNE_MEM_MB MiB"
     say "GOMEMLIMIT: $TUNE_LIMIT"
     say ""
+    say "Сейчас:"
+    mem_report
+    say ""
     say "Будет добавлено:"
     printf '%s\n' "$PREVIEW"
     say ""
@@ -379,12 +425,16 @@ tune_apply() {
     /etc/init.d/tailscale restart || { say "Перезапуск не удался."; return 1; }
 
     sleep 4
-    PID="$(pidof tailscaled | awk '{print $1}')"
-    if [ -n "$PID" ]; then
-        say "Переменные:"
-        tr '\0' '\n' < "/proc/$PID/environ" 2>/dev/null | grep -E '^(GOMEMLIMIT|GODEBUG)=' || true
-        grep -E 'VmRSS' "/proc/$PID/status" 2>/dev/null | sed 's/^/  /' || true
+    say ""
+    say "После перезапуска:"
+    mem_report
+    if [ -n "$TS_PID" ]; then
+        say "  переменные:"
+        tr '\0' '\n' < "/proc/$TS_PID/environ" 2>/dev/null | grep -E '^(GOMEMLIMIT|GODEBUG)=' | sed 's/^/    /' || true
     fi
+    say ""
+    say "GOMEMLIMIT — мягкий лимит: RSS может быть выше, но память"
+    say "будет возвращаться ОС активнее. Сравните «Сейчас» и «После»."
     say ""
     return 0
 }
@@ -462,8 +512,8 @@ say ""
 while :; do
     say "Что сделать?"
     say "  1) Установить Tailscale и настроить интерфейс/firewall"
-    say "  2) Проверить, установлен ли Tailscale"
-    say "  3) Настроить память (GOMEMLIMIT/GODEBUG)"
+    say "  2) Проверить состояние и память"
+    say "  3) Настроить память (покажет до и после)"
     say "  4) Вернуть исходный init-скрипт (память)"
     say "  5) Остановить Tailscale и выйти (logout)"
     say "  0) Выйти"

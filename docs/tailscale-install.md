@@ -55,8 +55,8 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 
 Что сделать?
   1) Установить Tailscale и настроить интерфейс/firewall
-  2) Проверить, установлен ли Tailscale
-  3) Настроить память (GOMEMLIMIT/GODEBUG)
+  2) Проверить состояние и память
+  3) Настроить память (покажет до и после)
   4) Вернуть исходный init-скрипт (память)
   5) Остановить Tailscale и выйти (logout)
   0) Выйти
@@ -67,13 +67,16 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 
 Пункт 2 (или `--status`) ничего не меняет — показывает: установлен ли
 пакет, включён ли автозапуск, запущен ли процесс, есть ли интерфейс,
-зона и forwarding, настроена ли память и подключён ли tailnet
-(без списка устройств).
+зона и forwarding, настроена ли память, сколько занимает `tailscaled`
+(RSS), сколько ОЗУ свободно и подключён ли tailnet (без списка устройств).
 
-Пункт 3 (или `--tune`) ограничивает память Tailscale: добавляет
+Пункт 3 (или `--tune`) ограничивает память Tailscale: сначала показывает
+текущее состояние (RSS `tailscaled` и свободная память), затем добавляет
 `GOMEMLIMIT` и `GODEBUG=madvdontneed=1`, делает бэкап init-скрипта
-и перезапускает службу. Пункт 4 (или `--tune-restore`) возвращает
-исходный init из бэкапа.
+и перезапускает службу. После перезапуска выводит те же цифры ещё раз —
+видно, сколько было и сколько стало. Пункт 4 (или `--tune-restore`)
+возвращает исходный init из бэкапа. Только память можно посмотреть
+командой `--mem`.
 
 Пункт 5 — остановить Tailscale и выполнить logout. Сначала выводится
 предупреждение, что устройство пропадёт из tailnet, и запрос `[y/N]`.
@@ -86,7 +89,8 @@ wget -O /tmp/tailscale-install.sh https://raw.githubusercontent.com/k4reon/k4reo
 ```sh
 sh /tmp/tailscale-install.sh --yes       # установить и настроить
 sh /tmp/tailscale-install.sh --dry-run   # только показать план
-sh /tmp/tailscale-install.sh --status    # проверить, установлен ли Tailscale
+sh /tmp/tailscale-install.sh --status    # состояние и память
+sh /tmp/tailscale-install.sh --mem       # только память: RSS и ОЗУ
 sh /tmp/tailscale-install.sh --tune      # настроить память
 sh /tmp/tailscale-install.sh --tune-restore  # вернуть init из бэкапа
 sh /tmp/tailscale-install.sh --stop --yes  # остановить и выйти (logout)
@@ -112,9 +116,37 @@ Tailscale — Go-приложение; на роутере он занимает
 | 512 МБ | рекомендуется, если не хватает памяти |
 | 1 ГБ и больше | обычно не требуется |
 
-Скрипт показывает, что будет добавлено, делает бэкап
-`/etc/init.d/tailscale.bak`, перезапускает службу и выводит переменные
-и RSS. `GOMEMLIMIT` — мягкий лимит, RSS он жёстко не ограничивает.
+Скрипт показывает «Сейчас» (RSS `tailscaled` и свободная память), что
+будет добавлено, делает бэкап `/etc/init.d/tailscale.bak`, перезапускает
+службу и выводит «После перезапуска» — те же цифры плюс переменные
+`GOMEMLIMIT` и `GODEBUG`. `GOMEMLIMIT` — мягкий лимит, RSS он жёстко
+не ограничивает, но освобождённая память возвращается ОС активнее;
+сразу после старта RSS обычно ниже, чем в работе.
+
+Пример вывода:
+
+```
+ОЗУ роутера: 256 MiB
+GOMEMLIMIT: 64MiB
+
+Сейчас:
+  tailscaled (pid 2409): 97 MiB RSS
+  ОЗУ: свободно 48 MiB из 256 MiB
+
+Будет добавлено:
+  procd_append_param env GOMEMLIMIT=64MiB
+  procd_append_param env GODEBUG=madvdontneed=1
+
+...
+После перезапуска:
+  tailscaled (pid 3120): 61 MiB RSS
+  ОЗУ: свободно 83 MiB из 256 MiB
+  переменные:
+    GOMEMLIMIT=64MiB
+    GODEBUG=madvdontneed=1
+```
+
+Посмотреть память позже: пункт 2 меню или `--mem`.
 
 ## Проверено
 
