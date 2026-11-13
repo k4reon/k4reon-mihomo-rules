@@ -21,6 +21,7 @@
 +.adminion.n-blade.ru
 +.all4nothin.net
 +.anidex.moe
++.announce.augrains.com
 +.api.bitumconference.ru
 +.archive.torrentonline.cc
 +.aruacfilmes.com.br
@@ -289,6 +290,7 @@
 +.tracker.bittor.pw
 +.tracker.bittorrent.am
 +.tracker.blacksparrowmedia.net
++.tracker.bluefrog.pw
 +.tracker.bt-hash.com
 +.tracker.bt4g.com
 +.tracker.btnext.com
@@ -404,6 +406,7 @@
 +.tracker.tasvideos.org
 +.tracker.teambelgium.net
 +.tracker.theempire.bz
++.tracker.theoks.net
 +.tracker.therarbg.to
 +.tracker.tiny-vps.com
 +.tracker.tntvillage.scambioetico.org
