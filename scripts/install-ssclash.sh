@@ -40,6 +40,8 @@ UNINSTALL=0
 VARIANT=""
 MODE="full"
 FROM_DIR=""
+CORE_SELECT=""
+WEB_PASSWORD=""
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ОШИБКА: %s\n' "$*"; exit 1; }
@@ -54,6 +56,10 @@ while [ $# -gt 0 ]; do
         --ss4)       VARIANT="ss4" ;;
         --client)    MODE="client" ;;
         --core)      MODE="core" ;;
+        --core-version) CORE_SELECT="${2:-}"; shift ;;
+        --core-version=*) CORE_SELECT="${1#*=}" ;;
+        --web-password) WEB_PASSWORD="${2:-}"; shift ;;
+        --web-password=*) WEB_PASSWORD="${1#*=}" ;;
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
         --help|-h)
@@ -200,6 +206,104 @@ go_version() {
 core_version() {
     [ -x "$CLASH_BIN" ] || return 0
     "$CLASH_BIN" -v 2>/dev/null | grep -o 'v[0-9][0-9.]*' | head -n1
+}
+
+set_core() {
+    ver="$1"
+    case "$ver" in
+        v*) ;;
+        *)  ver="v$ver" ;;
+    esac
+    case "$ver" in
+        v1.19.24) CORE_SHA="6d4a278e7ace1016f23d7245f6f8911f6f7a4adfba2095704473d937e1911840" ;;
+        v1.19.25) CORE_SHA="0d2f19c4bf30121feff4ca51a1a5ddd7837ee1f9faaf930ca83533bca51e8b34" ;;
+        v1.19.30) CORE_SHA="58896873736d28628f66de3677c8654fa0f180662523148e136cff4f6e890069" ;;
+        v1.19.31) CORE_SHA="9e0f11afbf38426b8bd88fdc594678f8161c57eccb4e1b77acb12b493904f1d4" ;;
+        v1.19.34) CORE_SHA="daaf78a6240a282cdfd75bcbf98fe321f6bd52765cc29e79f344191198f0b50f" ;;
+        *) die "неизвестная версия ядра: $ver" ;;
+    esac
+    CORE_VER="$ver"
+    CORE_FILE="mihomo-linux-arm64-$ver.gz"
+    CORE_BASE="https://github.com/MetaCubeX/mihomo/releases/download/$ver"
+}
+
+choose_core() {
+    if [ -n "$CORE_SELECT" ]; then
+        set_core "$CORE_SELECT"
+        return 0
+    fi
+    say ""
+    say "Выберите ядро Mihomo:"
+    say "  1) v1.19.24 — 31,9 МБ (база, без Tailscale/OpenVPN/ZeroTier/EasyTier)"
+    say "  2) v1.19.25 — 41,1 МБ (+ Tailscale, OpenVPN, GOST)"
+    say "  3) v1.19.30 — 44,4 МБ (+ ZeroTier, AmneziaWG)"
+    say "  4) v1.19.31 — 54,6 МБ (+ EasyTier)"
+    say "  5) v1.19.34 — 54,7 МБ (последняя)"
+    say "  0) Отмена"
+    printf 'Выбор: '
+    read c
+    case "$c" in
+        1) set_core v1.19.24 ;;
+        2) set_core v1.19.25 ;;
+        3) set_core v1.19.30 ;;
+        4) set_core v1.19.31 ;;
+        5) set_core v1.19.34 ;;
+        *) say "Отменено."; return 1 ;;
+    esac
+    say "  выбрано: $CORE_VER"
+    return 0
+}
+
+lan_ip() {
+    ip="$(uci -q get network.lan.ipaddr 2>/dev/null)"
+    [ -n "$ip" ] || ip="$(ip -4 addr show br-lan 2>/dev/null | sed -n 's/.*inet \([0-9.]*\)\/.*/\1/p' | head -n1)"
+    [ -n "$ip" ] || ip="$(hostname -i 2>/dev/null | awk '{print $1}')"
+    printf '%s' "${ip:-<IP>}"
+}
+
+ui_port() {
+    p="$(sed -n 's/.*SSCLASH_ADDR="\{0,1\}[^:]*:\([0-9][0-9]*\)".*/\1/p' /etc/init.d/ssclash 2>/dev/null | head -n1)"
+    printf '%s' "${p:-9091}"
+}
+
+ask_web_password() {
+    [ -n "$WEB_PASSWORD" ] && return 0
+    [ -t 0 ] || return 0
+    printf 'Пароль веб-интерфейса (мин. 8, пусто — не задавать): '
+    stty -echo 2>/dev/null
+    read -r WEB_PASSWORD
+    stty echo 2>/dev/null
+    say ""
+    if [ -n "$WEB_PASSWORD" ] && [ "${#WEB_PASSWORD}" -lt 8 ]; then
+        say "Пароль короче 8 символов — не сохраняю."
+        WEB_PASSWORD=""
+    fi
+}
+
+web_start_core() {
+    [ -n "$WEB_PASSWORD" ] || return 1
+    command -v curl >/dev/null 2>&1 || return 1
+    tmp="/tmp/ssclash-web.$$"
+    page="$(curl -s -m 10 -c "$tmp" http://127.0.0.1:9091/setup 2>/dev/null)"
+    csrf="$(printf '%s' "$page" | sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' | head -n1)"
+    [ -n "$csrf" ] || { rm -f "$tmp"; return 1; }
+    curl -s -m 10 -b "$tmp" -c "$tmp" \
+        --data-urlencode "csrf=$csrf" \
+        --data-urlencode "password=$WEB_PASSWORD" \
+        --data-urlencode "password2=$WEB_PASSWORD" \
+        --data-urlencode "next=/setup" \
+        "http://127.0.0.1:9091/setup" >/dev/null 2>&1
+    home="$(curl -s -m 10 -b "$tmp" http://127.0.0.1:9091/ 2>/dev/null)"
+    token="$(printf '%s' "$home" | sed -n 's/.*name="csrf-token" content="\([^"]*\)".*/\1/p' | head -n1)"
+    body="$(curl -s -m 15 -b "$tmp" -H "Content-Type: application/json" \
+        -H "X-CSRF-Token: $token" -d '{"action":"start"}' \
+        http://127.0.0.1:9091/api/service 2>/dev/null)"
+    rm -f "$tmp"
+    say "  $body"
+    case "$body" in
+        *'"running":true'*) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 ask_yes() {
@@ -457,14 +561,31 @@ install_go() {
         rm -f "$tmp_gz"
     fi
 
+    if [ "$mode" != "core" ]; then
+        ask_web_password
+    fi
+
     /etc/init.d/ssclash enable >/dev/null 2>&1 || true
     /etc/init.d/ssclash start >/dev/null 2>&1 || true
     sleep 3
 
+    if [ -n "$WEB_PASSWORD" ]; then
+        say "Настройка веб-интерфейса..."
+        web_start_core || say "  (не удалось автоматически создать пароль/запустить ядро)"
+        sleep 2
+    fi
+
+    ip="$(lan_ip)"
+    port="$(ui_port)"
     say ""
     if pidof ssclash >/dev/null 2>&1; then
         say "Готово: SSClash-Go $GO_VER, ядро $CORE_VER."
-        say "Веб-интерфейс: http://<IP>:9091"
+        say "Веб-интерфейс: http://$ip:$port"
+        if pidof clash >/dev/null 2>&1; then
+            say "Ядро: запущено."
+        else
+            say "Ядро: не запущено. Откройте http://$ip:$port и нажмите Start."
+        fi
     else
         say "Пакет установлен, но служба не запустилась — проверьте logread."
     fi
@@ -613,7 +734,8 @@ install_ss4() {
         say "Готово: ядро Mihomo $CORE_VER."
     else
         say "Готово: SSClash 4 $SS4_VER, ядро $CORE_VER."
-        say "Откройте LuCI → Services → SSClash и запустите службу."
+        say "LuCI: http://$(lan_ip)/ → Services → SSClash."
+        say "Служба пока не запущена — откройте LuCI и нажмите Start."
     fi
     return 0
 }
@@ -677,6 +799,9 @@ fi
 
 if [ -n "$VARIANT" ]; then
     if [ "$VARIANT" = "go" ]; then
+        if [ "$MODE" = "core" ] && [ -n "$CORE_SELECT" ]; then
+            choose_core || exit 1
+        fi
         install_go "$MODE"; exit $?
     else
         install_ss4 "$MODE"; exit $?
@@ -699,12 +824,14 @@ say " SSClash: установка и обновление"
 say "========================================"
 say " устройство: $(cat /tmp/sysinfo/model 2>/dev/null || echo '?')"
 say " OpenWrt $DISTRIB_RELEASE, $DISTRIB_ARCH"
+core_label="$(core_version)"
+[ -n "$core_label" ] && core_label=" (ядро $core_label)" || core_label=""
 if go_installed; then
-    say " установлено: SSClash-Go $(go_version) (ядро $(core_version))"
+    say " установлено: SSClash-Go $(go_version)$core_label"
 elif ss4_installed; then
-    say " установлено: SSClash 4 $(pkg_version luci-app-ssclash) (ядро $(core_version))"
+    say " установлено: SSClash 4 $(pkg_version luci-app-ssclash)$core_label"
 else
-    say " установлено: ничего (ядро $(core_version))"
+    say " установлено: ничего"
 fi
 
 while :; do
@@ -728,12 +855,14 @@ if [ "$run_go_menu" = "1" ]; then
     while :; do
         say ""
         say "SSClash-Go"
-        say "  версия: $GO_VER, ядро Mihomo $CORE_VER"
-        say "  установлено: $(go_version)"
+        say "  версия: $GO_VER, целевое ядро: $CORE_VER"
+        gv="$(go_version)"
+        [ -n "$gv" ] || gv="не установлен"
+        say "  установлено: $gv"
         say ""
-        say "  1) Установить / обновить всё"
-        say "  2) Обновить только клиент"
-        say "  3) Обновить только ядро Mihomo"
+        say "  1) Установить всё (клиент + ядро)"
+        say "  2) Установить только клиент"
+        say "  3) Установить только ядро"
         say "  4) Проверить состояние"
         say "  5) Удалить SSClash-Go"
         say "  0) Назад"
@@ -742,7 +871,7 @@ if [ "$run_go_menu" = "1" ]; then
         case "$choice" in
             ""|1) install_go full ;;
             2)    install_go client ;;
-            3)    install_go core ;;
+            3)    if choose_core; then install_go core; fi ;;
             4)    show_status ;;
             5)    remove_go ;;
             0)    break ;;
