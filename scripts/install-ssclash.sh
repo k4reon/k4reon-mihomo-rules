@@ -215,7 +215,21 @@ ask_yes() {
 }
 
 free_mb() {
-    df "$1" 2>/dev/null | awk 'NR==2 { printf "%d", $4 / 1024 }'
+    # Свободное место на writable-overlay. Пробуем /overlay и /,
+    # берём максимум: на части прошивок /overlay не отдельный mount.
+    best=""
+    for p in "$1" /; do
+        [ -e "$p" ] || continue
+        kb="$(df -k "$p" 2>/dev/null | tail -n 1 | awk '{print $4}')"
+        case "$kb" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        mb=$((kb / 1024))
+        if [ -z "$best" ] || [ "$mb" -gt "$best" ]; then
+            best="$mb"
+        fi
+    done
+    printf '%s' "${best:-0}"
 }
 
 stop_go() {
@@ -370,8 +384,8 @@ install_go() {
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
     box=$(free_mb /overlay)
-    [ -n "$box" ] && [ "$box" -lt 90 ] && {
-        say "Мало места во флеш-памяти: ${box} МБ, нужно около 90 МБ."
+    [ -n "$box" ] && [ "$box" -lt 20 ] && {
+        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~20 МБ."
         return 1
     }
 
@@ -527,8 +541,8 @@ install_ss4() {
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
     box=$(free_mb /overlay)
-    [ -n "$box" ] && [ "$box" -lt 90 ] && {
-        say "Мало места во флеш-памяти: ${box} МБ, нужно около 90 МБ."
+    [ -n "$box" ] && [ "$box" -lt 20 ] && {
+        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~20 МБ."
         return 1
     }
 
