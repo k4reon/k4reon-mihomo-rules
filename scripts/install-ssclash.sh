@@ -301,12 +301,11 @@ ask_web_password() {
     fi
 }
 
-web_start_core() {
+web_setup_password() {
     [ -n "$WEB_PASSWORD" ] || return 1
     tmp="/tmp/ssclash-web.$$"
     pw="$(printf '%s' "$WEB_PASSWORD" | sed 's/%/%25/g; s/ /%20/g; s/&/%26/g; s/+/%2B/g; s/#/%23/g')"
-    body=""
-    done_wget=0
+    ok=0
 
     # GNU wget с cookies — основной путь (curl на части прошивок сломан).
     if command -v wget >/dev/null 2>&1 && wget --help 2>&1 | grep -q -- '--save-cookies'; then
@@ -323,21 +322,12 @@ web_start_core() {
             wget -q -O /dev/null --load-cookies "$tmp" --save-cookies "$tmp" \
                 --keep-session-cookies \
                 --post-data="csrf=$csrf&password=$pw&password2=$pw&next=/setup" \
-                http://127.0.0.1:9091/setup 2>/dev/null
-            home="$(wget -q -O - --load-cookies "$tmp" --keep-session-cookies \
-                http://127.0.0.1:9091/ 2>/dev/null)"
-            token="$(printf '%s' "$home" | sed -n 's/.*name="csrf-token" content="\([^"]*\)".*/\1/p' | head -n1)"
-            body="$(wget -q -O - --load-cookies "$tmp" --keep-session-cookies \
-                --header='Content-Type: application/json' \
-                --header="X-CSRF-Token: $token" \
-                --post-data='{"action":"start"}' \
-                http://127.0.0.1:9091/api/service 2>/dev/null)"
-            done_wget=1
+                http://127.0.0.1:9091/setup 2>/dev/null && ok=1
         fi
     fi
 
     # Запасной путь — curl, если он рабочий.
-    if [ "$done_wget" -eq 0 ] && command -v curl >/dev/null 2>&1 \
+    if [ "$ok" -eq 0 ] && command -v curl >/dev/null 2>&1 \
         && curl --version >/dev/null 2>&1; then
         page="$(curl -s -m 10 -c "$tmp" http://127.0.0.1:9091/setup 2>/dev/null)"
         csrf="$(printf '%s' "$page" | sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' | head -n1)"
@@ -347,21 +337,16 @@ web_start_core() {
                 --data-urlencode "password=$WEB_PASSWORD" \
                 --data-urlencode "password2=$WEB_PASSWORD" \
                 --data-urlencode "next=/setup" \
-                "http://127.0.0.1:9091/setup" >/dev/null 2>&1
-            home="$(curl -s -m 10 -b "$tmp" http://127.0.0.1:9091/ 2>/dev/null)"
-            token="$(printf '%s' "$home" | sed -n 's/.*name="csrf-token" content="\([^"]*\)".*/\1/p' | head -n1)"
-            body="$(curl -s -m 15 -b "$tmp" -H "Content-Type: application/json" \
-                -H "X-CSRF-Token: $token" -d '{"action":"start"}' \
-                http://127.0.0.1:9091/api/service 2>/dev/null)"
+                "http://127.0.0.1:9091/setup" >/dev/null 2>&1 && ok=1
         fi
     fi
 
     rm -f "$tmp"
-    [ -n "$body" ] && say "  $body"
-    case "$body" in
-        *'"running":true'*) return 0 ;;
-        *) return 1 ;;
-    esac
+    if [ "$ok" -eq 1 ]; then
+        say "  пароль веб-интерфейса установлен (ядро не запускаю)"
+        return 0
+    fi
+    return 1
 }
 
 ask_yes() {
@@ -694,7 +679,7 @@ install_go() {
 
     if [ -n "$WEB_PASSWORD" ]; then
         say "Настройка веб-интерфейса..."
-        web_start_core || say "  (не удалось автоматически создать пароль/запустить ядро)"
+        web_setup_password || say "  (не удалось автоматически создать пароль веб-интерфейса)"
         sleep 2
     fi
 
@@ -962,8 +947,9 @@ else
 fi
 
 while :; do
-    say ""
-    say "Что установить?"
+    while :; do
+        say ""
+        say "Что установить?"
     say "  1) SSClash-Go — новая версия, веб-интерфейс :9091"
     say "  2) SSClash 4 — LuCI, Services → SSClash"
     say "  0) Выйти"
@@ -1062,3 +1048,4 @@ else
         esac
     done
 fi
+done
