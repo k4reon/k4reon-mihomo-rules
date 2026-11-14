@@ -726,6 +726,7 @@ install_go() {
         chmod 755 /opt/clash/bin/ssclash
         tar -xzf "$tmp_svc" -C / || { say "Не удалось распаковать init-скрипт."; return 1; }
         chmod 755 /etc/init.d/ssclash
+        chown root:root /etc/init.d/ssclash 2>/dev/null || true
         rm -f "$tmp_bin" "$tmp_svc"
     fi
 
@@ -909,7 +910,7 @@ install_ss4() {
         else
             opkg install "$tmp_pkg" || { say "opkg install не удался."; return 1; }
         fi
-        rm -f "$tmp_pkg"
+        rm -f "$tmp_pkg" /opt/clash/config.yaml-opkg
     fi
 
     if [ "$mode" != "core" ]; then
