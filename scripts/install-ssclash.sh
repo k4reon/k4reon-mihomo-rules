@@ -26,6 +26,7 @@
 #    sh install-ssclash.sh --go --core --yes     # только ядро
 #    sh install-ssclash.sh --go --core --yes --force  # переустановить ту же версию
 #    sh install-ssclash.sh --status       # состояние
+#    sh install-ssclash.sh --memory       # лимиты памяти GOGC/GOMEMLIMIT
 #    sh install-ssclash.sh --dry-run      # только план
 #    sh install-ssclash.sh --ss4 --uninstall
 #
@@ -40,6 +41,7 @@ ASSUME_YES=0
 STATUS_ONLY=0
 UNINSTALL=0
 FORCE=0
+MEMORY_ONLY=0
 VARIANT=""
 MODE="full"
 FROM_DIR=""
@@ -55,6 +57,7 @@ while [ $# -gt 0 ]; do
         --yes|-y)    ASSUME_YES=1 ;;
         --force)     FORCE=1 ;;
         --status)    STATUS_ONLY=1 ;;
+        --memory)    MEMORY_ONLY=1 ;;
         --uninstall) UNINSTALL=1 ;;
         --go)        VARIANT="go" ;;
         --ss4)       VARIANT="ss4" ;;
@@ -68,7 +71,7 @@ while [ $# -gt 0 ]; do
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
         --help|-h)
-            sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,35p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) die "неизвестный аргумент: $1" ;;
@@ -470,6 +473,13 @@ install_core() {
         fi
     fi
     mv /tmp/clash.new "$CLASH_BIN" || { say "Не удалось заменить ядро."; return 1; }
+    if ! "$CLASH_BIN" -v >/dev/null 2>&1; then
+        say "Новое ядро не запускается после записи (возможно, кончилось место)."
+        if [ -f "$CLASH_BIN.old" ]; then
+            mv "$CLASH_BIN.old" "$CLASH_BIN" && say "  восстановлено старое ядро."
+        fi
+        return 1
+    fi
     say "  установлено: $("$CLASH_BIN" -v 2>/dev/null | head -n1)"
     return 0
 }
@@ -539,6 +549,31 @@ install_go_profiles() {
         return 1
     fi
     return 0
+}
+
+# ---------------- настройка памяти ---------------------------------
+
+run_memory_tool() {
+    tmp_mem="/tmp/memory-limit.sh"
+    say ""
+    if [ -n "$FROM_DIR" ] && [ -f "$FROM_DIR/memory-limit.sh" ]; then
+        cp "$FROM_DIR/memory-limit.sh" "$tmp_mem" \
+            || { say "Не удалось скопировать memory-limit.sh."; return 1; }
+    else
+        say "Загрузка memory-limit.sh..."
+        fetch "$tmp_mem" \
+            "$RAW_BASE/scripts/memory-limit.sh" \
+            "$JSD_BASE/scripts/memory-limit.sh" \
+            || { say "Не удалось скачать memory-limit.sh."; return 1; }
+    fi
+    chmod 755 "$tmp_mem"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        sh "$tmp_mem" --dry-run
+    elif [ "$ASSUME_YES" -eq 1 ]; then
+        sh "$tmp_mem" --yes
+    else
+        sh "$tmp_mem"
+    fi
 }
 
 # ---------------- проверка состояния -----------------------------
@@ -657,9 +692,29 @@ install_go() {
     # Ничего не качаем, если запрошенная версия уже стоит.
     if [ "$FORCE" -eq 0 ]; then
         case "$mode" in
+            full)
+                if [ -x /opt/clash/bin/ssclash ] && [ -x "$CLASH_BIN" ] \
+                   && [ "$(go_version)" = "$GO_VER" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+                    say "SSClash-Go $GO_VER и ядро $CORE_VER уже установлены — обновление не требуется."
+                    say "Переустановить принудительно: --force"
+                    return 0
+                fi
+                ;;
             client-update)
                 if [ -x /opt/clash/bin/ssclash ] && [ "$(go_version)" = "$GO_VER" ]; then
                     say "SSClash-Go $GO_VER уже установлен — обновление не требуется."
+                    say "Переустановить принудительно: --force"
+                    return 0
+                fi
+                ;;
+            client)
+                if [ -x /opt/clash/bin/ssclash ] && [ "$(go_version)" = "$GO_VER" ] \
+                   && [ -f /opt/clash/config.yaml ] \
+                   && [ -f /opt/clash/configs/full-proxy.yaml ] \
+                   && [ -f /opt/clash/configs/full-direct.yaml ] \
+                   && [ -f /opt/clash/configs/lite-proxy.yaml ] \
+                   && [ -f /opt/clash/configs/lite-direct.yaml ]; then
+                    say "SSClash-Go $GO_VER и профили уже установлены — обновление не требуется."
                     say "Переустановить принудительно: --force"
                     return 0
                 fi
@@ -876,6 +931,25 @@ install_ss4() {
         return 0
     fi
 
+    # Ничего не качаем, если нужная версия уже стоит.
+    if [ "$FORCE" -eq 0 ]; then
+        if [ "$mode" = "core" ]; then
+            if [ -x "$CLASH_BIN" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+                say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
+                say "Переустановить принудительно: --force"
+                return 0
+            fi
+        elif ss4_installed && [ -x "$CLASH_BIN" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+            case "$(pkg_version luci-app-ssclash)" in
+                "$SS4_VER"*)
+                    say "SSClash 4 $SS4_VER и ядро $CORE_VER уже установлены — обновление не требуется."
+                    say "Переустановить принудительно: --force"
+                    return 0
+                    ;;
+            esac
+        fi
+    fi
+
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
     # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
@@ -1004,6 +1078,11 @@ remove_ss4() {
 
 # ---------------- сценарии ---------------------------------------
 
+if [ "$MEMORY_ONLY" -eq 1 ]; then
+    run_memory_tool
+    exit $?
+fi
+
 if [ "$STATUS_ONLY" -eq 1 ]; then
     show_status
     exit 0
@@ -1042,7 +1121,7 @@ fi
 
 if [ ! -t 0 ]; then
     say "SSClash: установка"
-    say "Запустите интерактивно или укажите: sh $0 --go --yes | --ss4 --yes"
+    say "Запустите интерактивно или укажите: sh $0 --go --yes | --ss4 --yes | --memory"
     exit 0
 fi
 
@@ -1067,6 +1146,7 @@ while :; do
         say "Что установить?"
     say "  1) SSClash-Go — новая версия, веб-интерфейс :9091"
     say "  2) SSClash 4 — LuCI, Services → SSClash"
+    say "  3) Память — лимиты GOGC / GOMEMLIMIT для mihomo"
     say "  0) Выйти"
     printf 'Выбор: '
     read choice
@@ -1074,8 +1154,9 @@ while :; do
     case "$choice" in
         1|"") run_go_menu=1; break ;;
         2)     run_go_menu=0; break ;;
+        3)     run_memory_tool ;;
         0)     say "Выход."; exit 0 ;;
-        *)     say "Введите 1, 2 или 0." ;;
+        *)     say "Введите 1, 2, 3 или 0." ;;
     esac
 done
 
@@ -1110,10 +1191,25 @@ if [ "$run_go_menu" = "1" ]; then
         printf 'Выбор: '
         read choice
         case "$choice" in
-            ""|1) install_go full ;;
+            ""|1)
+                if [ "$DRY_RUN" -eq 0 ] && [ -x /opt/clash/bin/ssclash ] && [ -x "$CLASH_BIN" ] \
+                   && [ "$(go_version)" = "$GO_VER" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+                    say "SSClash-Go $GO_VER и ядро $CORE_VER уже установлены — обновление не требуется."
+                    if ask_yes "Переустановить принудительно?"; then
+                        FORCE=1
+                        install_go full
+                    fi
+                else
+                    install_go full
+                fi
+                ;;
             2)
-                if go_installed; then
-                    say "SSClash-Go уже установлен — используйте пункт 3 (обновить)."
+                if go_installed && [ "$(go_version)" = "$GO_VER" ] && [ -f /opt/clash/config.yaml ]; then
+                    say "SSClash-Go $GO_VER и профили уже установлены — обновление не требуется."
+                    if [ "$DRY_RUN" -eq 0 ] && ask_yes "Переустановить клиент и профили принудительно?"; then
+                        FORCE=1
+                        install_go client
+                    fi
                 else
                     install_go client
                 fi
@@ -1136,7 +1232,17 @@ if [ "$run_go_menu" = "1" ]; then
                 ;;
             4)
                 if go_installed; then
-                    if choose_core; then install_go core; fi
+                    if choose_core; then
+                        if [ "$DRY_RUN" -eq 0 ] && [ -x "$CLASH_BIN" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+                            say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
+                            if ask_yes "Переустановить принудительно?"; then
+                                FORCE=1
+                                install_go core
+                            fi
+                        else
+                            install_go core
+                        fi
+                    fi
                 else
                     say "Сначала установите клиент (пункт 2)."
                 fi
@@ -1182,8 +1288,33 @@ else
         printf 'Выбор: '
         read choice
         case "$choice" in
-            ""|1) install_ss4 full ;;
-            2)    install_ss4 core ;;
+            ""|1)
+                ss4_ok=0
+                case "$(pkg_version luci-app-ssclash)" in
+                    "$SS4_VER"*) ss4_ok=1 ;;
+                esac
+                if [ "$DRY_RUN" -eq 0 ] && [ "$ss4_ok" -eq 1 ] && [ -x "$CLASH_BIN" ] \
+                   && [ "$(core_version)" = "$CORE_VER" ]; then
+                    say "SSClash 4 $SS4_VER и ядро $CORE_VER уже установлены — обновление не требуется."
+                    if ask_yes "Переустановить принудительно?"; then
+                        FORCE=1
+                        install_ss4 full
+                    fi
+                else
+                    install_ss4 full
+                fi
+                ;;
+            2)
+                if [ "$DRY_RUN" -eq 0 ] && [ -x "$CLASH_BIN" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+                    say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
+                    if ask_yes "Переустановить принудительно?"; then
+                        FORCE=1
+                        install_ss4 core
+                    fi
+                else
+                    install_ss4 core
+                fi
+                ;;
             3)    show_status ;;
             4)    remove_ss4 ;;
             0)    break ;;
