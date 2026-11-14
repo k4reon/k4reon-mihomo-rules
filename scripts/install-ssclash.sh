@@ -689,11 +689,18 @@ install_go() {
 
     ip="$(lan_ip)"
     port="$(ui_port)"
+    core_now="$(core_version)"
     say ""
     if pidof ssclash >/dev/null 2>&1; then
-        say "Готово: SSClash-Go $GO_VER, ядро $CORE_VER."
+        if [ -n "$core_now" ]; then
+            say "Готово: SSClash-Go $GO_VER, ядро $core_now."
+        else
+            say "Готово: SSClash-Go $GO_VER, ядро не установлено."
+        fi
         say "Веб-интерфейс: http://$ip:$port"
-        if pidof clash >/dev/null 2>&1; then
+        if [ -z "$core_now" ]; then
+            say "Ядро: не установлено. Установите пунктом 4."
+        elif pidof clash >/dev/null 2>&1; then
             say "Ядро: запущено."
         else
             say "Ядро: не запущено. Нажмите Start в веб-интерфейсе."
