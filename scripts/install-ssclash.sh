@@ -455,7 +455,16 @@ install_core() {
 
     make_dirs
     if [ -x "$CLASH_BIN" ]; then
-        cp "$CLASH_BIN" "$CLASH_BIN.old" 2>/dev/null || true
+        cur_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 2 ))
+        avail=$(free_mb /overlay)
+        if [ -n "$avail" ] && [ "$avail" -gt "$cur_mb" ]; then
+            rm -f "$CLASH_BIN.old"
+            if cp "$CLASH_BIN" "$CLASH_BIN.old" 2>/dev/null; then
+                say "  старое ядро сохранено: $(basename "$CLASH_BIN").old"
+            fi
+        else
+            say "  места для копии старого ядра нет — ставлю без резерва"
+        fi
     fi
     mv /tmp/clash.new "$CLASH_BIN" || { say "Не удалось заменить ядро."; return 1; }
     say "  установлено: $("$CLASH_BIN" -v 2>/dev/null | head -n1)"
@@ -644,9 +653,15 @@ install_go() {
 
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
+    # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
+    # не нужна. Клиент и профили пишутся в /opt/clash, там нужен запас.
     box=$(free_mb /overlay)
-    [ -n "$box" ] && [ "$box" -lt 20 ] && {
-        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~20 МБ."
+    case "$mode" in
+        core) need_mb=3 ;;
+        *)    need_mb=20 ;;
+    esac
+    [ -n "$box" ] && [ "$box" -lt "$need_mb" ] && {
+        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~${need_mb} МБ."
         return 1
     }
 
@@ -703,7 +718,8 @@ install_go() {
     make_dirs
     if [ "$need_client" -eq 1 ]; then
         cur="$(go_version)"
-        if [ -x /opt/clash/bin/ssclash ]; then
+        if [ -x /opt/clash/bin/ssclash ] && [ "$cur" != "$GO_VER" ]; then
+            rm -f /opt/clash/bin/ssclash.*.bak
             cp /opt/clash/bin/ssclash "/opt/clash/bin/ssclash.$cur.bak" 2>/dev/null || true
         fi
         cp "$tmp_bin" /opt/clash/bin/ssclash || { say "Не удалось установить клиент."; return 1; }
@@ -838,9 +854,15 @@ install_ss4() {
 
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
+    # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
+    # не нужна. Клиент и профили пишутся в /opt/clash, там нужен запас.
     box=$(free_mb /overlay)
-    [ -n "$box" ] && [ "$box" -lt 20 ] && {
-        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~20 МБ."
+    case "$mode" in
+        core) need_mb=3 ;;
+        *)    need_mb=20 ;;
+    esac
+    [ -n "$box" ] && [ "$box" -lt "$need_mb" ] && {
+        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~${need_mb} МБ."
         return 1
     }
 
