@@ -692,7 +692,7 @@ install_go() {
         if pidof clash >/dev/null 2>&1; then
             say "Ядро: запущено."
         else
-            say "Ядро: не запущено. Откройте http://$ip:$port и нажмите Start."
+            say "Ядро: не запущено. Нажмите Start в веб-интерфейсе."
         fi
     else
         say "Пакет установлен, но служба не запустилась — проверьте logread."
