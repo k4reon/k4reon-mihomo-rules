@@ -118,6 +118,12 @@ sh /tmp/install-ssclash.sh --go --core --yes --force
 Для SSClash 4:
 
 ```
+SSClash 4
+  версия: 4.7.1, целевое ядро: v1.19.34
+  пакет: 4.7.1-r1 (установлен)   | не установлен
+  ядро: v1.19.34                 | не установлено
+  SSClash-Go 7.7.2 — будет удалён при установке SSClash 4
+
   1) Установить / обновить
   2) Обновить только ядро Mihomo
   3) Проверить состояние
@@ -127,6 +133,18 @@ sh /tmp/install-ssclash.sh --go --core --yes --force
 
 `0` в подменю возвращает в главное меню; `0` в главном меню — выход
 из скрипта.
+
+## Удаление
+
+Удаление требует ввести `yes` — и для SSClash-Go, и для SSClash 4.
+Каталог `/opt/clash` (конфиг, профили, ядро) удаляется только
+отдельным подтверждением; в неинтерактивном режиме — только с
+флагом `--purge`:
+
+```sh
+sh /tmp/install-ssclash.sh --go --uninstall --yes          # конфиг остаётся
+sh /tmp/install-ssclash.sh --go --uninstall --yes --purge  # удалить всё
+```
 
 ## Без вопросов
 
@@ -143,6 +161,7 @@ sh /tmp/install-ssclash.sh --memory              # лимиты памяти, с
 sh /tmp/install-ssclash.sh --memory --yes        # лимиты памяти без вопросов
 sh /tmp/install-ssclash.sh --dry-run --go        # только план
 sh /tmp/install-ssclash.sh --ss4 --uninstall     # удалить
+sh /tmp/install-ssclash.sh --go --uninstall --yes --purge  # удалить с конфигом
 ```
 
 ## Память

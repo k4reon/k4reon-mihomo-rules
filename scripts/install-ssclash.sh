@@ -29,6 +29,7 @@
 #    sh install-ssclash.sh --memory       # лимиты памяти GOGC/GOMEMLIMIT
 #    sh install-ssclash.sh --dry-run      # только план
 #    sh install-ssclash.sh --ss4 --uninstall
+#    sh install-ssclash.sh --go --uninstall --purge   # вместе с /opt/clash
 #
 #  Сервис SSClash 4 после установки остаётся выключенным:
 #  включите его в LuCI -> Services -> SSClash.
@@ -42,6 +43,7 @@ STATUS_ONLY=0
 UNINSTALL=0
 FORCE=0
 MEMORY_ONLY=0
+PURGE=0
 VARIANT=""
 MODE="full"
 FROM_DIR=""
@@ -59,6 +61,7 @@ while [ $# -gt 0 ]; do
         --status)    STATUS_ONLY=1 ;;
         --memory)    MEMORY_ONLY=1 ;;
         --uninstall) UNINSTALL=1 ;;
+        --purge)     PURGE=1 ;;
         --go)        VARIANT="go" ;;
         --ss4)       VARIANT="ss4" ;;
         --client)    MODE="client" ;;
@@ -71,7 +74,7 @@ while [ $# -gt 0 ]; do
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
         --help|-h)
-            sed -n '2,35p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) die "неизвестный аргумент: $1" ;;
@@ -609,6 +612,11 @@ show_status() {
     if [ -x "$CLASH_BIN" ]; then
         say "  установлено: $(core_version)"
         say "  файл: $CLASH_BIN"
+        if pidof clash >/dev/null 2>&1; then
+            say "  процесс: запущен"
+        else
+            say "  процесс: не запущен"
+        fi
     else
         say "  не установлено"
     fi
@@ -862,7 +870,10 @@ remove_go() {
     say ""
     say "ВНИМАНИЕ: будет удалён SSClash-Go (клиент и служба)."
     say "Конфиг /opt/clash не затрагивается."
-    if [ "$DRY_RUN" -eq 0 ] && ! ask_yes "Продолжить?"; then say "Отменено."; return 1; fi
+    if [ "$DRY_RUN" -eq 0 ] && ! ask_confirm_word "Удалить SSClash-Go? Введите yes: "; then
+        say "Отменено."
+        return 1
+    fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
         say "[dry-run] остановить и удалить /etc/init.d/ssclash и /opt/clash/bin/ssclash"
@@ -874,9 +885,20 @@ remove_go() {
     rm -f /etc/init.d/ssclash /opt/clash/bin/ssclash
     say "SSClash-Go удалён."
 
-    if [ -d "$CLASH_DIR" ] && ask_yes "Удалить /opt/clash (конфиг, подписки, ядро)?"; then
-        [ "$DRY_RUN" -eq 1 ] || rm -rf "$CLASH_DIR"
-        say "Каталог /opt/clash удалён."
+    if [ -d "$CLASH_DIR" ]; then
+        if [ "$PURGE" -eq 1 ]; then
+            rm -rf "$CLASH_DIR"
+            say "Каталог /opt/clash удалён (--purge)."
+        elif [ -t 0 ]; then
+            if ask_confirm_word "Удалить /opt/clash (конфиг, профили, ядро)? Введите yes: "; then
+                rm -rf "$CLASH_DIR"
+                say "Каталог /opt/clash удалён."
+            else
+                say "Каталог /opt/clash оставлен."
+            fi
+        else
+            say "Каталог /opt/clash оставлен (удалить: --purge)."
+        fi
     fi
     return 0
 }
@@ -1049,7 +1071,10 @@ remove_ss4() {
     say ""
     say "ВНИМАНИЕ: будет удалён пакет luci-app-ssclash и init-скрипт."
     say "Конфиг /opt/clash не затрагивается."
-    if [ "$DRY_RUN" -eq 0 ] && ! ask_yes "Продолжить?"; then say "Отменено."; return 1; fi
+    if [ "$DRY_RUN" -eq 0 ] && ! ask_confirm_word "Удалить SSClash 4? Введите yes: "; then
+        say "Отменено."
+        return 1
+    fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
         say "[dry-run] остановить службу и удалить luci-app-ssclash"
@@ -1069,9 +1094,20 @@ remove_ss4() {
     /etc/init.d/uhttpd reload >/dev/null 2>&1 || true
     say "SSClash 4 удалён."
 
-    if [ -d "$CLASH_DIR" ] && ask_yes "Удалить /opt/clash (конфиг, подписки, ядро)?"; then
-        rm -rf "$CLASH_DIR"
-        say "Каталог /opt/clash удалён."
+    if [ -d "$CLASH_DIR" ]; then
+        if [ "$PURGE" -eq 1 ]; then
+            rm -rf "$CLASH_DIR"
+            say "Каталог /opt/clash удалён (--purge)."
+        elif [ -t 0 ]; then
+            if ask_confirm_word "Удалить /opt/clash (конфиг, профили, ядро)? Введите yes: "; then
+                rm -rf "$CLASH_DIR"
+                say "Каталог /opt/clash удалён."
+            else
+                say "Каталог /opt/clash оставлен."
+            fi
+        else
+            say "Каталог /opt/clash оставлен (удалить: --purge)."
+        fi
     fi
     return 0
 }
@@ -1130,12 +1166,14 @@ say " SSClash: установка и обновление"
 say "========================================"
 say " устройство: $(cat /tmp/sysinfo/model 2>/dev/null || echo '?')"
 say " OpenWrt $DISTRIB_RELEASE, $DISTRIB_ARCH"
-core_label="$(core_version)"
-[ -n "$core_label" ] && core_label=" (ядро $core_label)" || core_label=""
+core_now="$(core_version)"
+if [ -n "$core_now" ]; then core_label=" (ядро $core_now)"; else core_label=""; fi
 if go_installed; then
     say " установлено: SSClash-Go $(go_version)$core_label"
 elif ss4_installed; then
     say " установлено: SSClash 4 $(pkg_version luci-app-ssclash)$core_label"
+elif [ -n "$core_now" ]; then
+    say " установлено: только ядро Mihomo $core_now"
 else
     say " установлено: ничего"
 fi
@@ -1277,8 +1315,23 @@ else
     while :; do
         say ""
         say "SSClash 4"
-        say "  версия: $SS4_VER, ядро Mihomo $CORE_VER"
-        say "  установлено: $(pkg_version luci-app-ssclash)"
+        say "  версия: $SS4_VER, целевое ядро: $CORE_VER"
+        sv="$(pkg_version luci-app-ssclash)"
+        if [ -n "$sv" ]; then
+            say "  пакет: $sv (установлен)"
+        else
+            say "  пакет: не установлен"
+        fi
+        cv2="$(core_version)"
+        if [ -n "$cv2" ]; then
+            say "  ядро: $cv2"
+        else
+            say "  ядро: не установлено"
+        fi
+        gv2="$(go_version)"
+        if [ -n "$gv2" ]; then
+            say "  SSClash-Go $gv2 — будет удалён при установке SSClash 4"
+        fi
         say ""
         say "  1) Установить / обновить"
         say "  2) Обновить только ядро Mihomo"
