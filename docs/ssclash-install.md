@@ -149,6 +149,27 @@ GitHub:
 SSClash 4 после установки остаётся выключенным: открой LuCI →
 **Services → SSClash**, проверь настройки и запусти.
 
+## Профили конфигурации
+
+При установке SSClash-Go (пункты 1–3) в `/opt/clash/configs/` кладутся
+четыре профиля:
+
+| Профиль | Что это |
+|---|---|
+| `full-proxy` | полный PROXY (`MATCH,PROXY`) |
+| `full-direct` | полный DIRECT (`MATCH,DIRECT`) |
+| `lite-proxy` | lite-PROXY без GEOIP/geosite |
+| `lite-direct` | lite-DIRECT без GEOIP/geosite |
+
+Если `/opt/clash/config.yaml` ещё нет, активным становится **`lite-direct`**:
+он копируется в `config.yaml`, а в `.ssclash/active-profile` пишется
+`lite-direct`. Если конфиг уже существует, он и активный профиль
+не меняются — новые профили просто добавляются.
+
+Подписка во всех профилях — заглушка
+`https://example.com/your-subscription`, её нужно заменить вручную
+в каждом профиле, которым будешь пользоваться.
+
 ## После установки SSClash-Go
 
 Скрипт спрашивает пароль веб-интерфейса (минимум 8 символов), сам создаёт

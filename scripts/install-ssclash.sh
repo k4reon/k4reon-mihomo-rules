@@ -95,7 +95,8 @@ JSD_BASE="https://cdn.jsdelivr.net/gh/k4reon/k4reon-mihomo-rules@main"
 GO_BASE="https://github.com/zerolabnet/SSClash-Go/releases/download/$GO_TAG"
 SS4_BASE="https://github.com/zerolabnet/SSClash/releases/download/$SS4_TAG"
 CORE_BASE="https://github.com/MetaCubeX/mihomo/releases/download/$CORE_VER"
-PROXIES="https://ghproxy.net/ https://gh-proxy.com/ https://ghfast.top/"
+CONFIG_DIRECT_RAW="$RAW_BASE/configs/ssclash-go/DIRECT.yaml"
+CONFIG_DIRECT_JSD="$JSD_BASE/configs/ssclash-go/DIRECT.yaml"PROXIES="https://ghproxy.net/ https://gh-proxy.com/ https://ghfast.top/"
 
 CLASH_DIR="/opt/clash"
 CLASH_BIN="$CLASH_DIR/bin/clash"
@@ -457,6 +458,70 @@ install_core() {
     return 0
 }
 
+install_default_config() {
+    if [ -f /opt/clash/config.yaml ]; then
+        say "Конфиг уже есть — оставляю без изменений."
+        return 0
+    fi
+    tmp="/tmp/ssclash-config.$$"
+    say "Загрузка конфига DIRECT..."
+    fetch "$tmp" \
+        "$CONFIG_DIRECT_JSD" \
+        "$CONFIG_DIRECT_RAW" \
+        "$REPO/raw/main/configs/ssclash-go/DIRECT.yaml" \
+        || { rm -f "$tmp"; say "Не удалось скачать конфиг DIRECT."; return 1; }
+    mkdir -p /opt/clash
+    cp "$tmp" /opt/clash/config.yaml \
+        && chmod 600 /opt/clash/config.yaml \
+        || { rm -f "$tmp"; say "Не удалось записать /opt/clash/config.yaml."; return 1; }
+    rm -f "$tmp"
+    say "  установлен config.yaml (DIRECT, подписка — заглушка)"
+    return 0
+}
+
+install_go_profiles() {
+    had_cfg=0
+    [ -f /opt/clash/config.yaml ] && had_cfg=1
+    mkdir -p /opt/clash/configs /opt/clash/.ssclash
+    say "Профили конфигурации:"
+    for item in \
+        "full-proxy:configs/ssclash-go/PROXY.yaml" \
+        "full-direct:configs/ssclash-go/DIRECT.yaml" \
+        "lite-proxy:configs/ssclash-go-lite/PROXY.yaml" \
+        "lite-direct:configs/ssclash-go-lite/DIRECT.yaml"
+    do
+        name="${item%%:*}"
+        rel="${item#*:}"
+        tmp="/tmp/ssclash-profile.$$"
+        if fetch "$tmp" \
+            "$JSD_BASE/$rel" \
+            "$RAW_BASE/$rel" \
+            "$REPO/raw/main/$rel"
+        then
+            cp "$tmp" "/opt/clash/configs/$name.yaml" \
+                && chmod 600 "/opt/clash/configs/$name.yaml" \
+                && say "  $name"
+        else
+            say "  [!] не удалось скачать $name"
+        fi
+        rm -f "$tmp"
+    done
+
+    if [ "$had_cfg" -eq 0 ] && [ -f /opt/clash/configs/lite-direct.yaml ]; then
+        cp /opt/clash/configs/lite-direct.yaml /opt/clash/config.yaml
+        chmod 600 /opt/clash/config.yaml
+        printf '%s' 'lite-direct' > /opt/clash/.ssclash/active-profile
+        say "Активный профиль: lite-direct"
+    elif [ "$had_cfg" -eq 1 ]; then
+        say "config.yaml уже есть — активный профиль не меняю."
+    fi
+    if [ ! -f /opt/clash/config.yaml ]; then
+        say "Не удалось установить ни одного профиля — config.yaml отсутствует."
+        return 1
+    fi
+    return 0
+}
+
 # ---------------- проверка состояния -----------------------------
 
 show_status() {
@@ -618,6 +683,7 @@ install_go() {
     fi
 
     if [ "$mode" != "core" ]; then
+        install_go_profiles || return 1
         ask_web_password
     fi
 
@@ -767,6 +833,10 @@ install_ss4() {
             opkg install "$tmp_pkg" || { say "opkg install не удался."; return 1; }
         fi
         rm -f "$tmp_pkg"
+    fi
+
+    if [ "$mode" != "core" ]; then
+        install_default_config || return 1
     fi
 
     install_core "$tmp_gz" || return 1
