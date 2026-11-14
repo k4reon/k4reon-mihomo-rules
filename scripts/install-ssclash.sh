@@ -24,6 +24,7 @@
 #    sh install-ssclash.sh --go --client --yes   # только клиент
 #    sh install-ssclash.sh --go --client-update --yes  # обновить клиент (без профилей)
 #    sh install-ssclash.sh --go --core --yes     # только ядро
+#    sh install-ssclash.sh --go --core --yes --force  # переустановить ту же версию
 #    sh install-ssclash.sh --status       # состояние
 #    sh install-ssclash.sh --dry-run      # только план
 #    sh install-ssclash.sh --ss4 --uninstall
@@ -38,6 +39,7 @@ DRY_RUN=0
 ASSUME_YES=0
 STATUS_ONLY=0
 UNINSTALL=0
+FORCE=0
 VARIANT=""
 MODE="full"
 FROM_DIR=""
@@ -51,6 +53,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --dry-run)   DRY_RUN=1 ;;
         --yes|-y)    ASSUME_YES=1 ;;
+        --force)     FORCE=1 ;;
         --status)    STATUS_ONLY=1 ;;
         --uninstall) UNINSTALL=1 ;;
         --go)        VARIANT="go" ;;
@@ -65,7 +68,7 @@ while [ $# -gt 0 ]; do
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
         --help|-h)
-            sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) die "неизвестный аргумент: $1" ;;
@@ -651,6 +654,26 @@ install_go() {
         return 0
     fi
 
+    # Ничего не качаем, если запрошенная версия уже стоит.
+    if [ "$FORCE" -eq 0 ]; then
+        case "$mode" in
+            client-update)
+                if [ -x /opt/clash/bin/ssclash ] && [ "$(go_version)" = "$GO_VER" ]; then
+                    say "SSClash-Go $GO_VER уже установлен — обновление не требуется."
+                    say "Переустановить принудительно: --force"
+                    return 0
+                fi
+                ;;
+            core)
+                if [ -x "$CLASH_BIN" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+                    say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
+                    say "Переустановить принудительно: --force"
+                    return 0
+                fi
+                ;;
+        esac
+    fi
+
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
     # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
@@ -1062,8 +1085,19 @@ if [ "$run_go_menu" = "1" ]; then
         say "SSClash-Go"
         say "  версия: $GO_VER, целевое ядро: $CORE_VER"
         gv="$(go_version)"
-        [ -n "$gv" ] || gv="не установлен"
-        say "  установлено: $gv"
+        if [ -z "$gv" ]; then
+            say "  клиент: не установлен"
+        elif [ "$gv" = "$GO_VER" ]; then
+            say "  клиент: $gv (последняя)"
+        else
+            say "  клиент: $gv → доступна $GO_VER"
+        fi
+        cv="$(core_version)"
+        if [ -z "$cv" ]; then
+            say "  ядро: не установлено"
+        else
+            say "  ядро: $cv"
+        fi
         say ""
         say "  1) Установить всё (клиент + ядро)"
         say "  2) Установить только клиент"
@@ -1086,7 +1120,16 @@ if [ "$run_go_menu" = "1" ]; then
                 ;;
             3)
                 if go_installed; then
-                    install_go client-update
+                    gv="$(go_version)"
+                    if [ "$gv" = "$GO_VER" ]; then
+                        say "SSClash-Go $GO_VER уже установлен — обновление не требуется."
+                        if [ "$DRY_RUN" -eq 0 ] && ask_yes "Переустановить клиент принудительно?"; then
+                            FORCE=1
+                            install_go client-update
+                        fi
+                    else
+                        install_go client-update
+                    fi
                 else
                     say "SSClash-Go не установлен — сначала пункт 2."
                 fi
@@ -1100,11 +1143,19 @@ if [ "$run_go_menu" = "1" ]; then
                 ;;
             5)
                 if go_installed; then
-                    if [ -n "$(core_version)" ]; then
-                        set_core v1.19.34
-                        install_go core
-                    else
+                    cv="$(core_version)"
+                    if [ -z "$cv" ]; then
                         say "Ядро не установлено — используйте пункт 4."
+                    elif [ "$cv" = "$CORE_VER" ]; then
+                        say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
+                        if [ "$DRY_RUN" -eq 0 ] && ask_yes "Переустановить ядро принудительно?"; then
+                            FORCE=1
+                            set_core "$CORE_VER"
+                            install_go core
+                        fi
+                    else
+                        set_core "$CORE_VER"
+                        install_go core
                     fi
                 else
                     say "Сначала установите клиент (пункт 2)."
