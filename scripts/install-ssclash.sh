@@ -216,10 +216,14 @@ service_running() {
 
 go_version() {
     [ -x /opt/clash/bin/ssclash ] || return 0
-    v="$(/opt/clash/bin/ssclash version 2>/dev/null | head -n1)"
+    v="$(/opt/clash/bin/ssclash version 2>&1 | head -n1)"
     case "$v" in
         *version=*) v="${v#*version=}" ;;
-        *) v="$(printf '%s' "$v" | grep -o 'v[0-9][0-9.]*' | head -n1)" ;;
+    esac
+    v="$(printf '%s' "$v" | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+    case "$v" in
+        ''|v*) ;;
+        *) v="v$v" ;;
     esac
     printf '%s' "$v"
 }
