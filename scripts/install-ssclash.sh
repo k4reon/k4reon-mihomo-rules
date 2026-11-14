@@ -137,17 +137,36 @@ fi
 
 fetch() {
     # fetch <output> <url> [<url> ...]
+    # На части роутеров curl не умеет GitHub (TLS/SNI), а wget/uclient-fetch
+    # работает. Поэтому пробуем оба инструмента для каждого URL.
     out="$1"; shift
     for url in "$@"; do
-        rm -f "$out"
-        if command -v curl >/dev/null 2>&1; then
-            curl -fsSL --retry 2 --connect-timeout 15 --max-time 300 \
-                --speed-limit 8192 --speed-time 25 -o "$out" "$url" 2>/dev/null \
-                && [ -s "$out" ] && return 0
-        else
-            wget -q -T 60 -O "$out" "$url" 2>/dev/null \
-                && [ -s "$out" ] && return 0
-        fi
+        for tool in curl wget uclient-fetch; do
+            case "$tool" in
+                curl)          command -v curl >/dev/null 2>&1 || continue ;;
+                wget)          command -v wget >/dev/null 2>&1 || continue ;;
+                uclient-fetch) command -v uclient-fetch >/dev/null 2>&1 || continue ;;
+            esac
+            rm -f "$out"
+            (
+                unset http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY
+                case "$tool" in
+                    curl)
+                        curl -fsSL --retry 2 --connect-timeout 15 --max-time 300 \
+                            --speed-limit 8192 --speed-time 25 -o "$out" "$url" 2>/dev/null
+                        ;;
+                    wget)
+                        wget -q -T 90 -O "$out" "$url" 2>/dev/null
+                        ;;
+                    uclient-fetch)
+                        uclient-fetch -q -T 90 -O "$out" "$url" 2>/dev/null
+                        ;;
+                esac
+            )
+            if [ -s "$out" ] && ! head -c 200 "$out" | grep -qi '<html'; then
+                return 0
+            fi
+        done
     done
     rm -f "$out"
     return 1
