@@ -22,6 +22,7 @@
 #    sh install-ssclash.sh --go --yes     # SSClash-Go
 #    sh install-ssclash.sh --ss4 --yes    # SSClash 4
 #    sh install-ssclash.sh --go --client --yes   # только клиент
+#    sh install-ssclash.sh --go --client-update --yes  # обновить клиент (без профилей)
 #    sh install-ssclash.sh --go --core --yes     # только ядро
 #    sh install-ssclash.sh --status       # состояние
 #    sh install-ssclash.sh --dry-run      # только план
@@ -55,6 +56,7 @@ while [ $# -gt 0 ]; do
         --go)        VARIANT="go" ;;
         --ss4)       VARIANT="ss4" ;;
         --client)    MODE="client" ;;
+        --client-update) MODE="client-update" ;;
         --core)      MODE="core" ;;
         --core-version) CORE_SELECT="${2:-}"; shift ;;
         --core-version=*) CORE_SELECT="${1#*=}" ;;
@@ -63,7 +65,7 @@ while [ $# -gt 0 ]; do
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
         --help|-h)
-            sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) die "неизвестный аргумент: $1" ;;
@@ -73,10 +75,10 @@ done
 
 # ---------------- версии и адреса --------------------------------
 
-GO_VER="7.7.1"
-GO_TAG="v7.7.1"
-GO_SHA="4175a529360acabb3e99e921537119c3be5eace94837d6a7c19bc45904d3718e"
-GO_SVC_SHA="c6115883f3ddab30de168d71468450431ca9d38021eae39b309b7f1383315768"
+GO_VER="7.7.2"
+GO_TAG="v7.7.2"
+GO_SHA="3e3df454aabf274b40dd26449759c3777277b1cadc2138647f9de5c86cf61848"
+GO_SVC_SHA="ba8596f9dd22896bb2673521c6273000d275f8a494ea8550c2b15e6ade207c10"
 
 SS4_VER="4.7.1"
 SS4_TAG="v4.7.1"
@@ -221,11 +223,7 @@ go_version() {
         *version=*) v="${v#*version=}" ;;
     esac
     v="$(printf '%s' "$v" | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
-    case "$v" in
-        ''|v*) ;;
-        *) v="v$v" ;;
-    esac
-    printf '%s' "$v"
+    printf '%s' "${v#v}"
 }
 
 core_version() {
@@ -294,6 +292,10 @@ ui_port() {
 ask_web_password() {
     [ -n "$WEB_PASSWORD" ] && return 0
     [ -t 0 ] || return 0
+    if [ -s /opt/clash/.ssclash/password ]; then
+        say "Пароль веб-интерфейса уже задан — оставляю без изменений."
+        return 0
+    fi
     printf 'Пароль веб-интерфейса (мин. 8, пусто — не задавать): '
     stty -echo 2>/dev/null
     read -r WEB_PASSWORD
@@ -361,6 +363,18 @@ ask_yes() {
     read ans
     case "$ans" in
         y|Y|yes|да|Да) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+ask_confirm_word() {
+    # ask_confirm_word <вопрос> — требует ввести слово yes для разрушительных действий
+    [ "$ASSUME_YES" -eq 1 ] && return 0
+    [ -t 0 ] || return 1
+    printf '%s' "$1"
+    read ans
+    case "$ans" in
+        yes|YES) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -488,6 +502,9 @@ install_go_profiles() {
             "$RAW_BASE/$rel" \
             "$REPO/raw/main/$rel"
         then
+            if [ -f "/opt/clash/configs/$name.yaml" ]; then
+                cp "/opt/clash/configs/$name.yaml" "/opt/clash/configs/$name.yaml.bak" 2>/dev/null || true
+            fi
             cp "$tmp" "/opt/clash/configs/$name.yaml" \
                 && chmod 600 "/opt/clash/configs/$name.yaml" \
                 && say "  $name"
@@ -556,10 +573,12 @@ show_status() {
 remove_ss4_for_go() {
     ss4_installed || return 0
     say ""
-    say "Установлен SSClash 4. Вместе с SSClash-Go они не работают."
+    say "ВНИМАНИЕ: установлен SSClash 4 — вместе с SSClash-Go он не работает."
+    say "Чтобы поставить SSClash-Go, пакет luci-app-ssclash и /etc/init.d/clash"
+    say "будут удалены. Каталог /opt/clash, профили и ядро останутся на месте."
     if [ "$DRY_RUN" -eq 0 ]; then
-        if ! ask_yes "Удалить SSClash 4 и продолжить?"; then
-            say "Отменено."
+        if ! ask_confirm_word "Удалить SSClash 4? Введите yes: "; then
+            say "Отменено — ничего не удалено."
             return 1
         fi
     fi
@@ -582,11 +601,38 @@ remove_ss4_for_go() {
 install_go() {
     mode="${1:-full}"
     say ""
-    if ! remove_ss4_for_go; then return 1; fi
+
+    case "$mode" in
+        client-update)
+            say "Режим: обновление только клиента"
+            say "  изменится:    /opt/clash/bin/ssclash, /etc/init.d/ssclash"
+            say "  не изменится: профили, config.yaml, пароль веб-интерфейса, ядро"
+            ;;
+        client)
+            say "Режим: установка только клиента"
+            say "  изменятся:    клиент, init-скрипт, профили, пароль (если ещё не задан)"
+            ;;
+        core)
+            say "Режим: только ядро Mihomo"
+            say "  изменится:    только /opt/clash/bin/clash"
+            ;;
+        *)
+            say "Режим: клиент + ядро"
+            ;;
+    esac
+
+    # Чужой продукт (SSClash 4) трогаем только при реальной установке Go
+    # и никогда — при обновлении клиента или ядра.
+    case "$mode" in
+        full|client)
+            if ! remove_ss4_for_go; then return 1; fi
+            ;;
+    esac
 
     if [ "$DRY_RUN" -eq 1 ]; then
         say "Будет установлено:"
         case "$mode" in
+            client-update) say "  только клиент SSClash-Go $GO_VER (без профилей и пароля)" ;;
             client) say "  только клиент SSClash-Go $GO_VER" ;;
             core)   say "  только ядро Mihomo $CORE_VER" ;;
             *)      say "  SSClash-Go $GO_VER и ядро Mihomo $CORE_VER" ;;
@@ -613,7 +659,7 @@ install_go() {
     need_client=0
     need_core=0
     case "$mode" in
-        client) need_client=1 ;;
+        client|client-update) need_client=1 ;;
         core)   need_core=1 ;;
         *)      need_client=1; need_core=1 ;;
     esac
@@ -672,10 +718,12 @@ install_go() {
         rm -f "$tmp_gz"
     fi
 
-    if [ "$mode" != "core" ]; then
-        install_go_profiles || return 1
-        ask_web_password
-    fi
+    case "$mode" in
+        full|client)
+            install_go_profiles || return 1
+            ask_web_password
+            ;;
+    esac
 
     /etc/init.d/ssclash enable >/dev/null 2>&1 || true
     /etc/init.d/ssclash start >/dev/null 2>&1 || true
@@ -743,10 +791,12 @@ remove_go() {
 remove_go_for_ss4() {
     go_installed || return 0
     say ""
-    say "Установлен SSClash-Go. Вместе с SSClash 4 они не работают."
+    say "ВНИМАНИЕ: установлен SSClash-Go — вместе с SSClash 4 он не работает."
+    say "Будут удалены /etc/init.d/ssclash и /opt/clash/bin/ssclash."
+    say "Каталог /opt/clash, профили и ядро останутся на месте."
     if [ "$DRY_RUN" -eq 0 ]; then
-        if ! ask_yes "Удалить SSClash-Go и продолжить?"; then
-            say "Отменено."
+        if ! ask_confirm_word "Удалить SSClash-Go? Введите yes: "; then
+            say "Отменено — ничего не удалено."
             return 1
         fi
     fi
@@ -764,7 +814,15 @@ remove_go_for_ss4() {
 install_ss4() {
     mode="${1:-full}"
     say ""
-    if ! remove_go_for_ss4; then return 1; fi
+    case "$mode" in
+        core) say "Режим: только ядро Mihomo (SSClash 4 не трогаю)" ;;
+        *)    say "Режим: SSClash 4 + ядро" ;;
+    esac
+    # Чужой продукт (SSClash-Go) трогаем только при установке SSClash 4,
+    # но никогда — при обновлении одного ядра.
+    if [ "$mode" != "core" ]; then
+        if ! remove_go_for_ss4; then return 1; fi
+    fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
         say "Будет установлено:"
@@ -1005,7 +1063,7 @@ if [ "$run_go_menu" = "1" ]; then
                 ;;
             3)
                 if go_installed; then
-                    install_go client
+                    install_go client-update
                 else
                     say "SSClash-Go не установлен — сначала пункт 2."
                 fi
