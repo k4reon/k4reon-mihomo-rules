@@ -301,24 +301,61 @@ ask_web_password() {
 
 web_start_core() {
     [ -n "$WEB_PASSWORD" ] || return 1
-    command -v curl >/dev/null 2>&1 || return 1
     tmp="/tmp/ssclash-web.$$"
-    page="$(curl -s -m 10 -c "$tmp" http://127.0.0.1:9091/setup 2>/dev/null)"
-    csrf="$(printf '%s' "$page" | sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' | head -n1)"
-    [ -n "$csrf" ] || { rm -f "$tmp"; return 1; }
-    curl -s -m 10 -b "$tmp" -c "$tmp" \
-        --data-urlencode "csrf=$csrf" \
-        --data-urlencode "password=$WEB_PASSWORD" \
-        --data-urlencode "password2=$WEB_PASSWORD" \
-        --data-urlencode "next=/setup" \
-        "http://127.0.0.1:9091/setup" >/dev/null 2>&1
-    home="$(curl -s -m 10 -b "$tmp" http://127.0.0.1:9091/ 2>/dev/null)"
-    token="$(printf '%s' "$home" | sed -n 's/.*name="csrf-token" content="\([^"]*\)".*/\1/p' | head -n1)"
-    body="$(curl -s -m 15 -b "$tmp" -H "Content-Type: application/json" \
-        -H "X-CSRF-Token: $token" -d '{"action":"start"}' \
-        http://127.0.0.1:9091/api/service 2>/dev/null)"
+    pw="$(printf '%s' "$WEB_PASSWORD" | sed 's/%/%25/g; s/ /%20/g; s/&/%26/g; s/+/%2B/g; s/#/%23/g')"
+    body=""
+    done_wget=0
+
+    # GNU wget с cookies — основной путь (curl на части прошивок сломан).
+    if command -v wget >/dev/null 2>&1 && wget --help 2>&1 | grep -q -- '--save-cookies'; then
+        i=0
+        while [ "$i" -lt 10 ]; do
+            page="$(wget -q -O - --save-cookies "$tmp" --keep-session-cookies \
+                http://127.0.0.1:9091/setup 2>/dev/null)"
+            [ -n "$page" ] && break
+            i=$((i + 1))
+            sleep 1
+        done
+        csrf="$(printf '%s' "$page" | sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' | head -n1)"
+        if [ -n "$csrf" ]; then
+            wget -q -O /dev/null --load-cookies "$tmp" --save-cookies "$tmp" \
+                --keep-session-cookies \
+                --post-data="csrf=$csrf&password=$pw&password2=$pw&next=/setup" \
+                http://127.0.0.1:9091/setup 2>/dev/null
+            home="$(wget -q -O - --load-cookies "$tmp" --keep-session-cookies \
+                http://127.0.0.1:9091/ 2>/dev/null)"
+            token="$(printf '%s' "$home" | sed -n 's/.*name="csrf-token" content="\([^"]*\)".*/\1/p' | head -n1)"
+            body="$(wget -q -O - --load-cookies "$tmp" --keep-session-cookies \
+                --header='Content-Type: application/json' \
+                --header="X-CSRF-Token: $token" \
+                --post-data='{"action":"start"}' \
+                http://127.0.0.1:9091/api/service 2>/dev/null)"
+            done_wget=1
+        fi
+    fi
+
+    # Запасной путь — curl, если он рабочий.
+    if [ "$done_wget" -eq 0 ] && command -v curl >/dev/null 2>&1 \
+        && curl --version >/dev/null 2>&1; then
+        page="$(curl -s -m 10 -c "$tmp" http://127.0.0.1:9091/setup 2>/dev/null)"
+        csrf="$(printf '%s' "$page" | sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' | head -n1)"
+        if [ -n "$csrf" ]; then
+            curl -s -m 10 -b "$tmp" -c "$tmp" \
+                --data-urlencode "csrf=$csrf" \
+                --data-urlencode "password=$WEB_PASSWORD" \
+                --data-urlencode "password2=$WEB_PASSWORD" \
+                --data-urlencode "next=/setup" \
+                "http://127.0.0.1:9091/setup" >/dev/null 2>&1
+            home="$(curl -s -m 10 -b "$tmp" http://127.0.0.1:9091/ 2>/dev/null)"
+            token="$(printf '%s' "$home" | sed -n 's/.*name="csrf-token" content="\([^"]*\)".*/\1/p' | head -n1)"
+            body="$(curl -s -m 15 -b "$tmp" -H "Content-Type: application/json" \
+                -H "X-CSRF-Token: $token" -d '{"action":"start"}' \
+                http://127.0.0.1:9091/api/service 2>/dev/null)"
+        fi
+    fi
+
     rm -f "$tmp"
-    say "  $body"
+    [ -n "$body" ] && say "  $body"
     case "$body" in
         *'"running":true'*) return 0 ;;
         *) return 1 ;;
@@ -881,20 +918,53 @@ if [ "$run_go_menu" = "1" ]; then
         say ""
         say "  1) Установить всё (клиент + ядро)"
         say "  2) Установить только клиент"
-        say "  3) Установить только ядро"
-        say "  4) Проверить состояние"
-        say "  5) Удалить SSClash-Go"
+        say "  3) Обновить только клиент"
+        say "  4) Установить только ядро"
+        say "  5) Обновить только ядро"
+        say "  6) Проверить состояние"
+        say "  7) Удалить SSClash-Go"
         say "  0) Назад"
         printf 'Выбор: '
         read choice
         case "$choice" in
             ""|1) install_go full ;;
-            2)    install_go client ;;
-            3)    if choose_core; then install_go core; fi ;;
-            4)    show_status ;;
-            5)    remove_go ;;
+            2)
+                if go_installed; then
+                    say "SSClash-Go уже установлен — используйте пункт 3 (обновить)."
+                else
+                    install_go client
+                fi
+                ;;
+            3)
+                if go_installed; then
+                    install_go client
+                else
+                    say "SSClash-Go не установлен — сначала пункт 2."
+                fi
+                ;;
+            4)
+                if go_installed; then
+                    if choose_core; then install_go core; fi
+                else
+                    say "Сначала установите клиент (пункт 2)."
+                fi
+                ;;
+            5)
+                if go_installed; then
+                    if [ -n "$(core_version)" ]; then
+                        set_core v1.19.34
+                        install_go core
+                    else
+                        say "Ядро не установлено — используйте пункт 4."
+                    fi
+                else
+                    say "Сначала установите клиент (пункт 2)."
+                fi
+                ;;
+            6)    show_status ;;
+            7)    remove_go ;;
             0)    break ;;
-            *)    say "Введите 1–5 или 0." ;;
+            *)    say "Введите 1–7 или 0." ;;
         esac
     done
 else
