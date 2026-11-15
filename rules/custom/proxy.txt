@@ -2,6 +2,9 @@
 DOMAIN-SUFFIX,100m3.ru
 DOMAIN-SUFFIX,spacesynth.ru
 DOMAIN-SUFFIX,tv.team
+DOMAIN-SUFFIX,tvtm.one
+DOMAIN-SUFFIX,iptvx.one
+DOMAIN-SUFFIX,epg.team
 
 # Speedtest (Ookla): замеры всегда через прокси-узел, в обоих профилях.
 DOMAIN-SUFFIX,speedtest.net
