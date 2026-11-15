@@ -2,3 +2,8 @@
 DOMAIN-SUFFIX,100m3.ru
 DOMAIN-SUFFIX,spacesynth.ru
 DOMAIN-SUFFIX,tv.team
+
+# Speedtest (Ookla): замеры всегда через прокси-узел, в обоих профилях.
+DOMAIN-SUFFIX,speedtest.net
+DOMAIN-SUFFIX,ookla.com
+DOMAIN-SUFFIX,ooklaserver.net
