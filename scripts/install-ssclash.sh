@@ -1266,11 +1266,19 @@ install_ss4() {
     if [ "$mode" != "core" ]; then
         say "Установка пакета..."
         if [ "$PM" = "apk" ]; then
-            apk add --allow-untrusted "$tmp_pkg" || { say "apk add не удался."; return 1; }
+            if ! apk add --allow-untrusted "$tmp_pkg" >/tmp/ss4-pkg.log 2>&1; then
+                say "apk add не удался:"; tail -n 20 /tmp/ss4-pkg.log; return 1
+            fi
         else
-            opkg install "$tmp_pkg" || { say "opkg install не удался."; return 1; }
+            if ! opkg install "$tmp_pkg" >/tmp/ss4-pkg.log 2>&1; then
+                say "opkg install не удался:"; tail -n 20 /tmp/ss4-pkg.log; return 1
+            fi
         fi
-        rm -f "$tmp_pkg" /opt/clash/config.yaml-opkg
+        # «Collected errors: resolve_conffiles … config.yaml-opkg» — безобидное
+        # предупреждение opkg: наш config.yaml поставлен раньше пакета.
+        grep -v -E 'Collected errors:|resolve_conffiles|config\.yaml-opkg' /tmp/ss4-pkg.log \
+            | sed '/^[[:space:]]*$/d'
+        rm -f /tmp/ss4-pkg.log "$tmp_pkg" /opt/clash/config.yaml-opkg
     fi
 
     if [ "$mode" = "core" ] && [ "$was_running" -eq 1 ]; then
