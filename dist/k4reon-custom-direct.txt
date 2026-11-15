@@ -27,3 +27,13 @@ DOMAIN-SUFFIX,inference.location.live.net
 DOMAIN-SUFFIX,hdreskan47.kinozo.cam
 DOMAIN-SUFFIX,southwindairlines.com
 DOMAIN-SUFFIX,flightradar24.com
+
+# AnyDesk: удалённое управление должно идти напрямую.
+# anydesk.com покрывает net.anydesk.com, relay-*.net.anydesk.com,
+# boot-01/boot-02.net.anydesk.com, relays.net.anydesk.com, download.anydesk.com.
+DOMAIN-SUFFIX,anydesk.com
+DOMAIN-SUFFIX,anydesk.de
+# TCP 6568 — штатный порт AnyDesk, TCP 7070 — порт прямых соединений (P2P).
+DST-PORT,6568
+DST-PORT,7070
+
