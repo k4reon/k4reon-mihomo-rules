@@ -102,7 +102,8 @@ SS4_IPK="luci-app-ssclash_4.7.1-r1_all.ipk"
 SS4_APK_SHA="e8d4f416654792e7541442eb91b751c38d534448301e0c8706bf6f5c6d18074d"
 SS4_IPK_SHA="b61c19cd752013208e50107359ad782560b46e554045985e7a2cc3e0182d11f5"
 
-CORE_VER="v1.19.34"
+CORE_DEFAULT="v1.19.34"
+CORE_VER="$CORE_DEFAULT"
 CORE_FILE="mihomo-linux-arm64-v1.19.34.gz"
 CORE_SHA="daaf78a6240a282cdfd75bcbf98fe321f6bd52765cc29e79f344191198f0b50f"
 
@@ -512,6 +513,21 @@ install_core() {
        && ! /tmp/clash.new -t -d "$CLASH_DIR" >/dev/null 2>&1; then
         say "  [!] новое ядро не принимает текущий конфиг — оставляю старое."
         say "      обойти проверку: --force"
+        rm -f /tmp/clash.new
+        return 1
+    fi
+
+    # Замена идёт через mv из tmpfs: старый файл при этом усекается, поэтому
+    # нужно, чтобы места с запасом хватало на новое ядро.
+    new_mb=$(( $(wc -c < /tmp/clash.new 2>/dev/null || echo 0) / 1048576 + 1 ))
+    old_mb=0
+    [ -x "$CLASH_BIN" ] && old_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
+    avail=$(free_mb /overlay)
+    need_mb=$(( new_mb + 2 - old_mb ))
+    [ "$need_mb" -lt 1 ] && need_mb=1
+    if [ -n "$avail" ] && [ "$avail" -lt "$need_mb" ]; then
+        say "  [!] для замены ядра нужно ~${need_mb} МБ свободно, сейчас ${avail} МБ."
+        say "      установка отменена, старое ядро не тронуто."
         rm -f /tmp/clash.new
         return 1
     fi
@@ -1501,6 +1517,8 @@ if [ "$run_go_menu" = "1" ]; then
                         else
                             install_go core
                         fi
+                        # выбор версии разовый: дальше «целевая» — последняя
+                        set_core "$CORE_DEFAULT"
                     fi
                 else
                     say "Сначала установите клиент (пункт 2)."
@@ -1511,16 +1529,20 @@ if [ "$run_go_menu" = "1" ]; then
                     cv="$(core_version)"
                     if [ -z "$cv" ]; then
                         say "Ядро не установлено — используйте пункт 4."
-                    elif [ "$cv" = "$CORE_VER" ]; then
-                        say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
-                        if [ "$DRY_RUN" -eq 0 ] && ask_yes "Переустановить ядро принудительно?"; then
-                            FORCE=1
-                            set_core "$CORE_VER"
+                    else
+                        # «Обновить ядро» всегда целится в последнюю версию,
+                        # независимо от того, что выбирали в пункте 4.
+                        set_core "$CORE_DEFAULT"
+                        if [ "$cv" = "$CORE_VER" ]; then
+                            say "Ядро Mihomo $CORE_VER (последнее) уже установлено — обновление не требуется."
+                            if [ "$DRY_RUN" -eq 0 ] && ask_yes "Переустановить ядро принудительно?"; then
+                                FORCE=1
+                                install_go core
+                            fi
+                        else
+                            say "Обновление ядра: $cv → $CORE_VER"
                             install_go core
                         fi
-                    else
-                        set_core "$CORE_VER"
-                        install_go core
                     fi
                 else
                     say "Сначала установите клиент (пункт 2)."
