@@ -38,6 +38,11 @@ DOMAIN-SUFFIX,anydesk.de
 DST-PORT,6568
 
 # RustDesk: публичная инфраструктура (rs-*.rustdesk.com, сайт, загрузки).
-# Свой сервер клиента добавляется отдельно — по домену или IP.
+# Порты 21115-21119 — стандартные для self-hosted сервера (hbbs/hbbr) и веб-клиента.
 DOMAIN-SUFFIX,rustdesk.com
+DST-PORT,21115
+DST-PORT,21116
+DST-PORT,21117
+DST-PORT,21118
+DST-PORT,21119
 
