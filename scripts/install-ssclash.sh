@@ -51,6 +51,7 @@ MODE="full"
 FROM_DIR=""
 CORE_SELECT=""
 WEB_PASSWORD=""
+SS4_PROFILE=""
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ОШИБКА: %s\n' "$*"; exit 1; }
@@ -74,6 +75,8 @@ while [ $# -gt 0 ]; do
         --core-version=*) CORE_SELECT="${1#*=}" ;;
         --web-password) WEB_PASSWORD="${2:-}"; shift ;;
         --web-password=*) WEB_PASSWORD="${1#*=}" ;;
+        --ss4-profile) SS4_PROFILE="${2:-}"; shift ;;
+        --ss4-profile=*) SS4_PROFILE="${1#*=}" ;;
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
         --help|-h)
@@ -109,8 +112,6 @@ JSD_BASE="https://cdn.jsdelivr.net/gh/k4reon/k4reon-mihomo-rules@main"
 GO_BASE="https://github.com/zerolabnet/SSClash-Go/releases/download/$GO_TAG"
 SS4_BASE="https://github.com/zerolabnet/SSClash/releases/download/$SS4_TAG"
 CORE_BASE="https://github.com/MetaCubeX/mihomo/releases/download/$CORE_VER"
-CONFIG_DIRECT_RAW="$RAW_BASE/configs/ssclash-go/DIRECT.yaml"
-CONFIG_DIRECT_JSD="$JSD_BASE/configs/ssclash-go/DIRECT.yaml"
 PROXIES="https://ghproxy.net/ https://gh-proxy.com/ https://ghfast.top/"
 
 CLASH_DIR="/opt/clash"
@@ -286,6 +287,46 @@ choose_core() {
         *) say "Отменено."; return 1 ;;
     esac
     say "  выбрано: $CORE_VER"
+    return 0
+}
+
+normalize_ss4_profile() {
+    [ -n "$SS4_PROFILE" ] || return 0
+    case "$SS4_PROFILE" in
+        direct|d) SS4_PROFILE="full-direct" ;;
+        proxy|p)  SS4_PROFILE="full-proxy" ;;
+        full-direct|full-proxy|lite-direct|lite-proxy) ;;
+        *) die "неизвестный профиль SSClash 4: $SS4_PROFILE (full-direct|full-proxy|lite-direct|lite-proxy)" ;;
+    esac
+    return 0
+}
+
+choose_ss4_profile() {
+    normalize_ss4_profile
+    if [ -n "$SS4_PROFILE" ]; then
+        return 0
+    fi
+    if [ ! -t 0 ]; then
+        SS4_PROFILE="full-direct"
+        return 0
+    fi
+    say ""
+    say "Профиль конфигурации SSClash 4:"
+    say "  1) full-direct — всё напрямую (MATCH,DIRECT), с геоданными"
+    say "  2) full-proxy  — правила, MATCH,PROXY, с геоданными"
+    say "  3) lite-direct — без геоданных, MATCH,DIRECT"
+    say "  4) lite-proxy  — без геоданных, MATCH,PROXY"
+    say "  0) Отмена"
+    printf 'Выбор [1]: '
+    read p
+    case "$p" in
+        ""|1) SS4_PROFILE="full-direct" ;;
+        2)    SS4_PROFILE="full-proxy" ;;
+        3)    SS4_PROFILE="lite-direct" ;;
+        4)    SS4_PROFILE="lite-proxy" ;;
+        *)    say "Отменено."; return 1 ;;
+    esac
+    say "  выбрано: $SS4_PROFILE"
     return 0
 }
 
@@ -491,24 +532,31 @@ install_core() {
     return 0
 }
 
-install_default_config() {
+install_ss4_config() {
+    prof="${SS4_PROFILE:-full-direct}"
+    case "$prof" in
+        full-proxy|lite-proxy|full-direct|lite-direct) ;;
+        *) prof="full-direct" ;;
+    esac
+
     if [ -f /opt/clash/config.yaml ]; then
         say "Конфиг уже есть — оставляю без изменений."
         return 0
     fi
     tmp="/tmp/ssclash-config.$$"
-    say "Загрузка конфига DIRECT..."
+    say "Загрузка конфига SSClash 4 ($prof)..."
     fetch "$tmp" \
-        "$CONFIG_DIRECT_JSD" \
-        "$CONFIG_DIRECT_RAW" \
-        "$REPO/raw/main/configs/ssclash-go/DIRECT.yaml" \
-        || { rm -f "$tmp"; say "Не удалось скачать конфиг DIRECT."; return 1; }
+        "$RAW_BASE/configs/ssclash-4/$prof.yaml" \
+        "$REPO/raw/main/configs/ssclash-4/$prof.yaml" \
+        "$JSD_BASE/configs/ssclash-4/$prof.yaml" \
+        || { rm -f "$tmp"; say "Не удалось скачать конфиг SSClash 4 ($prof)."; return 1; }
     mkdir -p /opt/clash
     cp "$tmp" /opt/clash/config.yaml \
         && chmod 600 /opt/clash/config.yaml \
         || { rm -f "$tmp"; say "Не удалось записать /opt/clash/config.yaml."; return 1; }
     rm -f "$tmp"
-    say "  установлен config.yaml (DIRECT, подписка — заглушка)"
+    printf '%s' "$prof" > /opt/clash/.ss4-profile 2>/dev/null || true
+    say "  установлен config.yaml (SSClash 4, $prof, подписка — заглушка)"
     return 0
 }
 
@@ -518,10 +566,10 @@ install_go_profiles() {
     mkdir -p /opt/clash/configs /opt/clash/.ssclash
     say "Профили конфигурации:"
     for item in \
-        "full-proxy:configs/ssclash-go/PROXY.yaml" \
-        "full-direct:configs/ssclash-go/DIRECT.yaml" \
-        "lite-proxy:configs/ssclash-go-lite/PROXY.yaml" \
-        "lite-direct:configs/ssclash-go-lite/DIRECT.yaml"
+        "full-proxy:configs/ssclash-go/full-proxy.yaml" \
+        "full-direct:configs/ssclash-go/full-direct.yaml" \
+        "lite-proxy:configs/ssclash-go/lite-proxy.yaml" \
+        "lite-direct:configs/ssclash-go/lite-direct.yaml"
     do
         name="${item%%:*}"
         rel="${item#*:}"
@@ -601,13 +649,14 @@ update_profiles() {
     rm -f "$active_old"
     active_changed=0
     changed=0
+    failed=0
 
     say ""
     for item in \
-        "full-proxy:configs/ssclash-go/PROXY.yaml" \
-        "full-direct:configs/ssclash-go/DIRECT.yaml" \
-        "lite-proxy:configs/ssclash-go-lite/PROXY.yaml" \
-        "lite-direct:configs/ssclash-go-lite/DIRECT.yaml"
+        "full-proxy:configs/ssclash-go/full-proxy.yaml" \
+        "full-direct:configs/ssclash-go/full-direct.yaml" \
+        "lite-proxy:configs/ssclash-go/lite-proxy.yaml" \
+        "lite-direct:configs/ssclash-go/lite-direct.yaml"
     do
         name="${item%%:*}"
         rel="${item#*:}"
@@ -620,6 +669,7 @@ update_profiles() {
             "$JSD_BASE/$rel"
         then
             say "  [!] не удалось скачать $name"
+            failed=$((failed + 1))
             rm -f "$tmp"
             continue
         fi
@@ -652,10 +702,18 @@ update_profiles() {
             changed=1
         else
             say "  [!] не удалось записать $name"
+            failed=$((failed + 1))
         fi
         rm -f "$tmp"
     done
 
+    if [ "$changed" -eq 0 ] && [ "$failed" -gt 0 ]; then
+        say ""
+        say "Профили не обновлены: ошибки загрузки ($failed)."
+        say "Проверьте связь с GitHub или повторите позже."
+        rm -f "$active_old"
+        return 1
+    fi
     if [ "$changed" -eq 0 ]; then
         say ""
         say "Профили уже актуальны."
@@ -1062,6 +1120,7 @@ remove_go_for_ss4() {
 install_ss4() {
     mode="${1:-full}"
     say ""
+    normalize_ss4_profile
     case "$mode" in
         core) say "Режим: только ядро Mihomo (SSClash 4 не трогаю)" ;;
         *)    say "Режим: SSClash 4 + ядро" ;;
@@ -1077,7 +1136,7 @@ install_ss4() {
         if [ "$mode" = "core" ]; then
             say "  только ядро Mihomo $CORE_VER"
         else
-            say "  SSClash 4 $SS4_VER ($SS4_FILE) и ядро Mihomo $CORE_VER"
+            say "  SSClash 4 $SS4_VER ($SS4_FILE), профиль ${SS4_PROFILE:-full-direct}, ядро Mihomo $CORE_VER"
             say "  служба останется выключенной до настройки в LuCI"
         fi
         say "  источник: зеркало в репозитории + официальный релиз"
@@ -1164,7 +1223,8 @@ install_ss4() {
     fi
 
     if [ "$mode" != "core" ]; then
-        install_default_config || return 1
+        if ! choose_ss4_profile; then return 1; fi
+        install_ss4_config || return 1
     fi
 
     install_core "$tmp_gz" || return 1
@@ -1187,7 +1247,7 @@ install_ss4() {
     if [ "$mode" = "core" ]; then
         say "Готово: ядро Mihomo $CORE_VER."
     else
-        say "Готово: SSClash 4 $SS4_VER, ядро $CORE_VER."
+        say "Готово: SSClash 4 $SS4_VER, профиль ${SS4_PROFILE:-full-direct}, ядро $CORE_VER."
         say "LuCI: http://$(lan_ip)/ → Services → SSClash."
         say "Служба пока не запущена — откройте LuCI и нажмите Start."
     fi
@@ -1464,6 +1524,8 @@ else
         else
             say "  пакет: не установлен"
         fi
+        pr="$(cat /opt/clash/.ss4-profile 2>/dev/null)"
+        [ -n "$pr" ] && say "  конфиг: $pr"
         cv2="$(core_version)"
         if [ -n "$cv2" ]; then
             say "  ядро: $cv2"

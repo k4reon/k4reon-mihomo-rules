@@ -25,7 +25,7 @@
 
 - правила доменов и IP под mihomo / Clash.Meta в формате `rule-providers`
   (`mrs` и текстовые наборы);
-- два профиля — `MATCH,PROXY` и `MATCH,DIRECT` — и полные конфиги
+- по четыре профиля в каждой версии — `full`/`lite` × `MATCH,PROXY`/`MATCH,DIRECT` —
   для SSClash-Go и SSClash 4;
 - готовые наборы в `dist/` и читаемые списки в `dist/lists/`;
 - скрипт настройки памяти для SSClash-Go и SSClash 4
@@ -82,7 +82,7 @@ https://ssclash.notion.site/Mihomo-SSClash-15989188f6b48051a97fc887adea736a
 ## Структура
 
 ```
-configs/     ssclash-go/ и ssclash-4/ — полные конфиги PROXY и DIRECT
+configs/     ssclash-go/ и ssclash-4/ — по 4 профиля: full/lite × proxy/direct
 dist/        готовые k4reon-*.mrs и classical-*.txt
 dist/lists/  полные объединённые списки в читаемом .txt
 rules/       локальные добавления по категориям + denylist
@@ -121,12 +121,28 @@ rule-providers и rules. Их можно брать целиком, а не со
 
 ## Полные конфиги
 
-- `configs/ssclash-go/PROXY.yaml` — полный `MATCH,PROXY` для SSClash-Go;
-- `configs/ssclash-go/DIRECT.yaml` — полный `MATCH,DIRECT` для SSClash-Go;
-- `configs/ssclash-4/PROXY.yaml` — полный `MATCH,PROXY` для SSClash 4;
-- `configs/ssclash-4/DIRECT.yaml` — полный `MATCH,DIRECT` для SSClash 4.
+Две папки, в каждой по четыре профиля:
 
-Отличие SSClash 4 только в блоке контроллера и UI:
+**SSClash-Go** — `configs/ssclash-go/`:
+
+- `full-proxy.yaml` — полный `MATCH,PROXY` (с геоданными);
+- `full-direct.yaml` — полный `MATCH,DIRECT` (с геоданными);
+- `lite-proxy.yaml` — без геоданных, `MATCH,PROXY`;
+- `lite-direct.yaml` — без геоданных, `MATCH,DIRECT`.
+
+**SSClash 4** — `configs/ssclash-4/`:
+
+- `full-proxy.yaml` — полный `MATCH,PROXY` (с геоданными);
+- `full-direct.yaml` — полный `MATCH,DIRECT` (с геоданными);
+- `lite-proxy.yaml` — без геоданных, `MATCH,PROXY`;
+- `lite-direct.yaml` — без геоданных, `MATCH,DIRECT`.
+
+`lite` не скачивает `geoip.metadb` (8 МБ) и `GeoSite.dat` (4,2 МБ):
+`GEOIP,RU` заменён на `RULE-SET,k4reon-ru-ip`, `geosite:category-ru` —
+на маски `'+.ru'`, `'+.su'` и т.п. Это вариант для роутеров с 44–128 МБ
+флеша (Cudy WR3000S/E, Netis NX30, Xiaomi AX3000T).
+
+Отличие SSClash 4 от SSClash-Go только в блоке контроллера и UI:
 
 ```yaml
 external-controller: 0.0.0.0:9090
@@ -300,8 +316,8 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 ## Как использовать
 
 **Вариант 1 — полный конфиг.**
-Для SSClash-Go: `configs/ssclash-go/PROXY.yaml` или `DIRECT.yaml`.
-Для SSClash 4: `configs/ssclash-4/PROXY.yaml` или `DIRECT.yaml`.
+Для SSClash-Go: `configs/ssclash-go/{full,lite}-{proxy,direct}.yaml`.
+Для SSClash 4: `configs/ssclash-4/{full,lite}-{proxy,direct}.yaml`.
 Заменить подписку и скопировать на роутер как `config.yaml`
 (или в профиль SSClash).
 
@@ -465,11 +481,18 @@ BYPASS_SOURCES=IP устройства/32
 Конфиги проверены на роутере:
 
 ```
-configs/ssclash-go/PROXY.yaml   → test is successful
-configs/ssclash-go/DIRECT.yaml  → test is successful
-configs/ssclash-4/PROXY.yaml    → test is successful
-configs/ssclash-4/DIRECT.yaml   → test is successful
+configs/ssclash-go/full-proxy.yaml  → test is successful
+configs/ssclash-go/full-direct.yaml → test is successful
+configs/ssclash-go/lite-proxy.yaml  → test is successful
+configs/ssclash-go/lite-direct.yaml → test is successful
+configs/ssclash-4/full-proxy.yaml   → test is successful
+configs/ssclash-4/full-direct.yaml  → test is successful
+configs/ssclash-4/lite-proxy.yaml   → test is successful
+configs/ssclash-4/lite-direct.yaml  → test is successful
 ```
+
+`lite`-профили проверены на Cudy WR3000S (44 МБ флеша) — геоданные
+не скачиваются, `GEOIP` заменён на `k4reon-ru-ip`.
 
 ## Память на слабых роутерах
 

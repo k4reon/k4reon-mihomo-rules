@@ -128,6 +128,7 @@ sh /tmp/install-ssclash.sh --go --core --yes --force
 SSClash 4
   версия: 4.7.1, целевое ядро: v1.19.34
   пакет: 4.7.1-r1 (установлен)   | не установлен
+  конфиг: lite-proxy             (если уже выбран)
   ядро: v1.19.34                 | не установлено
   SSClash-Go 7.7.2 — будет удалён при установке SSClash 4
 
@@ -136,6 +137,28 @@ SSClash 4
   3) Проверить состояние
   4) Удалить SSClash 4
   0) Назад
+```
+
+При установке (пункт 1) предлагается профиль — четыре варианта:
+
+```
+Профиль конфигурации SSClash 4:
+  1) full-direct — всё напрямую (MATCH,DIRECT), с геоданными
+  2) full-proxy  — правила, MATCH,PROXY, с геоданными
+  3) lite-direct — без геоданных, MATCH,DIRECT
+  4) lite-proxy  — без геоданных, MATCH,PROXY
+  0) Отмена
+```
+
+`lite` не скачивает `geoip.metadb` (8 МБ) и `GeoSite.dat` (4,2 МБ):
+`GEOIP,RU` заменён на `RULE-SET,k4reon-ru-ip`, `geosite:category-ru` —
+на маски `'+.ru'`, `'+.su'` и т.п. Выбор записывается в
+`/opt/clash/.ss4-profile` и показывается в меню.
+
+Без вопросов:
+
+```sh
+sh /tmp/install-ssclash.sh --ss4 --ss4-profile lite-proxy --yes
 ```
 
 `0` в подменю возвращает в главное меню; `0` в главном меню — выход

@@ -1,17 +1,20 @@
-# Lite-профили SSClash-Go
+# Профили SSClash-Go
 
-Конфиги для слабых роутеров (256 МБ RAM / 44–128 МБ flash):
-Netis NX30, Xiaomi AX3000T, Cudy WR3000S/E и подобные.
+В папке четыре профиля — по два на каждый режим:
 
-**Статус:** `lite-direct` проверен на Cudy WR3000S; `lite-proxy` — тестовый.
+| Файл | Правила | Геоданные | Для чего |
+|---|---|---|---|
+| `full-proxy.yaml` | `MATCH,PROXY` | `geoip` / `geosite` | роутер с запасом флеша |
+| `full-direct.yaml` | `MATCH,DIRECT` | `geoip` / `geosite` | всё напрямую |
+| `lite-proxy.yaml` | `MATCH,PROXY` | без геоданных | 44–128 МБ флеша |
+| `lite-direct.yaml` | `MATCH,DIRECT` | без геоданных | 44–128 МБ флеша |
 
-## Что изменено относительно полных профилей
+## Чем lite отличается от full
 
 1. **Нет геоданных.**
-   - `geo-auto-update: false`;
-   - убран `geox-url`;
-   - `GEOIP,RU` / `GEOIP,SU` заменены на `RULE-SET,k4reon-ru-ip`;
-   - `geosite:category-ru` в `nameserver-policy` заменён на обычные маски
+   - `geo-auto-update: false`, убран `geox-url`;
+   - `GEOIP,RU` заменён на `RULE-SET,k4reon-ru-ip`;
+   - `geosite:category-ru` в `nameserver-policy` заменён на маски
      `'+.ru'`, `'+.su'`, `'+.xn--p1ai'`, `'+.xn--p1acf'`, `'+.moscow'`,
      `'+.tatar'`.
 
@@ -24,14 +27,14 @@ Netis NX30, Xiaomi AX3000T, Cudy WR3000S/E и подобные.
    url: https://www.ipdeny.com/ipblocks/data/aggregated/ru-aggregated.zone
    ```
 
-3. **Обновление провайдеров** — раз в сутки (`interval: 86400` вместо `43200`).
+3. **Обновление провайдеров** — раз в 6 часов (`interval: 21600`).
 
 4. **Списки правил не упрощались**: те же категории, что в полных профилях.
 
 ## Чем отличается PROXY и DIRECT
 
-- `PROXY.yaml` — полный набор правил, включая RU-IP и Google direct;
-- `DIRECT.yaml` — без RU/private/torrent/google/custom-direct, как и раньше:
+- `*-proxy.yaml` — полный набор правил, включая RU-IP и Google direct;
+- `*-direct.yaml` — без RU/private/torrent/google/custom-direct:
   всё остальное закрывает `MATCH,DIRECT`.
 
 ## Что проверить на роутере
@@ -40,8 +43,7 @@ Netis NX30, Xiaomi AX3000T, Cudy WR3000S/E и подобные.
 2. **RU-сайты идут напрямую** — например, `2ip.ru` показывает российский IP.
 3. **YouTube, Discord, AI, мессенджеры, игры** — идут через свои группы.
 4. **Google** в PROXY-профиле открывается напрямую (российский IP).
-5. **DNS для `.ru`** работает: `nslookup yandex.ru` через DNS mihomo
-   (`127.0.0.1:7874`) отдаёт ответ.
+5. **DNS для `.ru`** работает: `nslookup yandex.ru` через DNS mihomo.
 6. **Память и место**:
 
    ```sh
@@ -51,30 +53,29 @@ Netis NX30, Xiaomi AX3000T, Cudy WR3000S/E и подобные.
    ls -l /opt/clash/*.dat /opt/clash/*.metadb 2>/dev/null
    ```
 
-   Файлов `GeoSite.dat` / `geoip.metadb` быть не должно — их можно
-   удалить перед тестом.
+   В lite-профилях файлов `GeoSite.dat` / `geoip.metadb` быть не должно.
 
-## Ожидаемая экономия
+## Ожидаемая экономия lite
 
 - flash: **−12,2 МБ** (8 МБ geoip + 4,2 МБ geosite);
 - RAM: ориентировочно 10–25 МБ за счёт отказа от geo-матчеров;
-- трафик: нет ежедневной загрузки 12 МБ геоданных.
+- трафик: нет обновления геоданных.
 
 ## Известные риски
 
 - `GEOIP,SU` убран: legacy-адреса бывшего СССР могут уйти в `MATCH`
-  (в PROXY-профиле — через прокси). Если это критично, вернём `GEOIP,SU`
-  и geoip-файл.
+  (в PROXY-профиле — через прокси).
 - `k4reon-ru-ip` тянется с `ipdeny.com` напрямую; если сайт недоступен,
   список не обновится, но правило продолжит работать с прошлой копией.
 - Маски `'+.ru'` в DNS-политике должны вести себя как `geosite:category-ru`;
-  это надо подтвердить на тесте.
+  на практике подтверждено на Cudy WR3000S.
 
-## Откат
+## Статус
 
-Вернуть полные конфиги:
+`lite-direct` проверен на Cudy WR3000S (44 МБ флеша), `lite-proxy` —
+тестовый. Полные профили проверены на GL-MT6000.
 
-```
-configs/ssclash-go/PROXY.yaml
-configs/ssclash-go/DIRECT.yaml
-```
+## SSClash 4
+
+Те же четыре профиля лежат в `configs/ssclash-4/` — отличие только в блоке
+контроллера и UI (`external-controller`, `external-ui`).
