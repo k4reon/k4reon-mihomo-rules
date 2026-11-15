@@ -30,8 +30,7 @@
 - готовые наборы в `dist/` и читаемые списки в `dist/lists/`;
 - скрипт настройки памяти для SSClash-Go и SSClash 4
   (`scripts/memory-limit.sh`);
-- памятки: удаление SSClash (`docs/ssclash-remove.md`) и архив гайда
-  Notion (`docs/ssclash-notion.md`).
+- архив гайда Notion (`docs/ssclash-notion.md`).
 
 ![SSClash-Go: профиль k4reon-proxy](docs/images/ssclash-ui.png)
 
@@ -88,13 +87,13 @@ dist/        готовые k4reon-*.mrs и classical-*.txt
 dist/lists/  полные объединённые списки в читаемом .txt
 rules/       локальные добавления по категориям + denylist
 scripts/     merge.py — слияние и фильтрация; memory-limit.sh — память SSClash-Go
-docs/        ssclash-notion.md — гайд, ssclash-remove.md — удаление SSClash
+docs/        ssclash-notion.md — гайд, ssclash-install.md — скрипт установки
 sources.json откуда брать публичные списки
 build.ps1 / build.sh
 ```
 
-Памятки: `docs/ssclash-notion.md` — настройка SSClash-Go/4, `docs/ssclash-remove.md` —
-полное удаление SSClash-Go и SSClash legacy (OpenWrt).
+Памятка: `docs/ssclash-notion.md` — настройка SSClash-Go/4. Установка,
+обновление и удаление — скриптом `scripts/install-ssclash.sh`.
 
 `configs/ssclash-go/*.yaml` — полные конфиги в стиле SSClash-Go: tproxy,
 DNS, sniffer, proxy-providers, группы `fallback`/`url-test`/`select`,

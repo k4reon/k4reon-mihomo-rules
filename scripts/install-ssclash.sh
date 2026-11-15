@@ -27,6 +27,7 @@
 #    sh install-ssclash.sh --go --core --yes --force  # переустановить ту же версию
 #    sh install-ssclash.sh --status       # состояние
 #    sh install-ssclash.sh --memory       # лимиты памяти GOGC/GOMEMLIMIT
+#    sh install-ssclash.sh --profiles     # обновить профили конфигурации
 #    sh install-ssclash.sh --dry-run      # только план
 #    sh install-ssclash.sh --ss4 --uninstall
 #    sh install-ssclash.sh --go --uninstall --purge   # вместе с /opt/clash
@@ -44,6 +45,7 @@ UNINSTALL=0
 FORCE=0
 MEMORY_ONLY=0
 PURGE=0
+PROFILES_ONLY=0
 VARIANT=""
 MODE="full"
 FROM_DIR=""
@@ -60,6 +62,7 @@ while [ $# -gt 0 ]; do
         --force)     FORCE=1 ;;
         --status)    STATUS_ONLY=1 ;;
         --memory)    MEMORY_ONLY=1 ;;
+        --profiles)  PROFILES_ONLY=1 ;;
         --uninstall) UNINSTALL=1 ;;
         --purge)     PURGE=1 ;;
         --go)        VARIANT="go" ;;
@@ -74,7 +77,7 @@ while [ $# -gt 0 ]; do
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
         --help|-h)
-            sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) die "неизвестный аргумент: $1" ;;
@@ -462,27 +465,28 @@ install_core() {
         return 1
     }
 
-    make_dirs
-    if [ -x "$CLASH_BIN" ]; then
-        cur_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 2 ))
-        avail=$(free_mb /overlay)
-        if [ -n "$avail" ] && [ "$avail" -gt "$cur_mb" ]; then
-            rm -f "$CLASH_BIN.old"
-            if cp "$CLASH_BIN" "$CLASH_BIN.old" 2>/dev/null; then
-                say "  старое ядро сохранено: $(basename "$CLASH_BIN").old"
-            fi
-        else
-            say "  места для копии старого ядра нет — ставлю без резерва"
-        fi
+    # Проверяем совместимость с текущим конфигом ДО замены: если новое ядро
+    # не понимает config.yaml, старое остаётся на месте целым и невредимым.
+    if [ "$FORCE" -eq 0 ] && [ -f "$CLASH_DIR/config.yaml" ] \
+       && ! /tmp/clash.new -t -d "$CLASH_DIR" >/dev/null 2>&1; then
+        say "  [!] новое ядро не принимает текущий конфиг — оставляю старое."
+        say "      обойти проверку: --force"
+        rm -f /tmp/clash.new
+        return 1
     fi
+
+    make_dirs
     mv /tmp/clash.new "$CLASH_BIN" || { say "Не удалось заменить ядро."; return 1; }
     if ! "$CLASH_BIN" -v >/dev/null 2>&1; then
         say "Новое ядро не запускается после записи (возможно, кончилось место)."
-        if [ -f "$CLASH_BIN.old" ]; then
-            mv "$CLASH_BIN.old" "$CLASH_BIN" && say "  восстановлено старое ядро."
-        fi
         return 1
     fi
+
+    # Копию старого ядра не держим: откат — установка прежней версии
+    # через «Установить только ядро». Заодно чистим копии прошлых версий скрипта.
+    rm -f "$CLASH_BIN.old" 2>/dev/null || true
+    rm -f "$CLASH_DIR"/bin/clash.v*.bak 2>/dev/null || true
+
     say "  установлено: $("$CLASH_BIN" -v 2>/dev/null | head -n1)"
     return 0
 }
@@ -523,9 +527,9 @@ install_go_profiles() {
         rel="${item#*:}"
         tmp="/tmp/ssclash-profile.$$"
         if fetch "$tmp" \
-            "$JSD_BASE/$rel" \
             "$RAW_BASE/$rel" \
-            "$REPO/raw/main/$rel"
+            "$REPO/raw/main/$rel" \
+            "$JSD_BASE/$rel"
         then
             if [ -f "/opt/clash/configs/$name.yaml" ]; then
                 cp "/opt/clash/configs/$name.yaml" "/opt/clash/configs/$name.yaml.bak" 2>/dev/null || true
@@ -551,6 +555,104 @@ install_go_profiles() {
         say "Не удалось установить ни одного профиля — config.yaml отсутствует."
         return 1
     fi
+    return 0
+}
+
+update_profiles() {
+    say ""
+    say "Обновление профилей конфигурации"
+    say "  изменится:    /opt/clash/configs/*.yaml (старые версии — в .bak)"
+    say "  не изменится: клиент, ядро, пароль"
+    say "  config.yaml:  только если его не правили вручную"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say ""
+        say "  будет скачано 4 профиля из репозитория и сверено с локальными"
+        return 0
+    fi
+
+    [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
+
+    mkdir -p /opt/clash/configs
+    active="$(cat /opt/clash/.ssclash/active-profile 2>/dev/null)"
+    active_old="/tmp/ssclash-active-old.$$"
+    rm -f "$active_old"
+    active_changed=0
+    changed=0
+
+    say ""
+    for item in \
+        "full-proxy:configs/ssclash-go/PROXY.yaml" \
+        "full-direct:configs/ssclash-go/DIRECT.yaml" \
+        "lite-proxy:configs/ssclash-go-lite/PROXY.yaml" \
+        "lite-direct:configs/ssclash-go-lite/DIRECT.yaml"
+    do
+        name="${item%%:*}"
+        rel="${item#*:}"
+        target="/opt/clash/configs/$name.yaml"
+        tmp="/tmp/ssclash-profile.$$"
+
+        if ! fetch "$tmp" \
+            "$RAW_BASE/$rel" \
+            "$REPO/raw/main/$rel" \
+            "$JSD_BASE/$rel"
+        then
+            say "  [!] не удалось скачать $name"
+            rm -f "$tmp"
+            continue
+        fi
+
+        if [ -f "$target" ] && cmp -s "$tmp" "$target"; then
+            say "  $name: без изменений"
+            rm -f "$tmp"
+            continue
+        fi
+
+        if [ -f "$target" ]; then
+            cp "$target" "$target.bak" 2>/dev/null || true
+            if [ "$name" = "$active" ]; then
+                cp "$target" "$active_old" 2>/dev/null || true
+                active_changed=1
+            fi
+        elif [ "$name" = "$active" ]; then
+            active_changed=1
+        fi
+
+        if cp "$tmp" "$target"; then
+            chmod 600 "$target"
+            say "  $name: обновлён"
+            changed=1
+        else
+            say "  [!] не удалось записать $name"
+        fi
+        rm -f "$tmp"
+    done
+
+    if [ "$changed" -eq 0 ]; then
+        say ""
+        say "Профили уже актуальны."
+        rm -f "$active_old"
+        return 0
+    fi
+
+    if [ "$active_changed" -eq 1 ] && [ -n "$active" ] && [ -f "$active_old" ] \
+       && [ -f /opt/clash/config.yaml ] && cmp -s /opt/clash/config.yaml "$active_old"; then
+        if cp "/opt/clash/configs/$active.yaml" /opt/clash/config.yaml; then
+            chmod 600 /opt/clash/config.yaml
+            say ""
+            say "config.yaml обновлён из профиля $active (правок не было)"
+            say "Перезапуск службы..."
+            /etc/init.d/ssclash restart >/dev/null 2>&1 || true
+            sleep 5
+        fi
+    elif [ -n "$active_old" ]; then
+        say ""
+        say "config.yaml отличается от профиля — оставляю без изменений"
+        say "Применить вручную: скопировать профиль из панели"
+    fi
+    rm -f "$active_old"
+    say ""
+    say "Готово: профили обновлены."
     return 0
 }
 
@@ -1119,6 +1221,15 @@ if [ "$MEMORY_ONLY" -eq 1 ]; then
     exit $?
 fi
 
+if [ "$PROFILES_ONLY" -eq 1 ]; then
+    if ! go_installed; then
+        say "SSClash-Go не установлен — профили ставить некуда."
+        exit 1
+    fi
+    update_profiles
+    exit $?
+fi
+
 if [ "$STATUS_ONLY" -eq 1 ]; then
     show_status
     exit 0
@@ -1225,6 +1336,7 @@ if [ "$run_go_menu" = "1" ]; then
         say "  5) Обновить только ядро"
         say "  6) Проверить состояние"
         say "  7) Удалить SSClash-Go"
+        say "  8) Обновить профили конфигурации"
         say "  0) Назад"
         printf 'Выбор: '
         read choice
@@ -1307,8 +1419,9 @@ if [ "$run_go_menu" = "1" ]; then
                 ;;
             6)    show_status ;;
             7)    remove_go ;;
+            8)    update_profiles ;;
             0)    break ;;
-            *)    say "Введите 1–7 или 0." ;;
+            *)    say "Введите 1–8 или 0." ;;
         esac
     done
 else
