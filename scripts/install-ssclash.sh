@@ -539,10 +539,19 @@ install_ss4_config() {
         *) prof="full-direct" ;;
     esac
 
+    # Конфиг от SSClash-Go (есть .ssclash/active-profile) заменяем своим,
+    # сохранив прежний в config.yaml.bak. Свой или ручной — не трогаем.
+    replace=0
     if [ -f /opt/clash/config.yaml ]; then
-        say "Конфиг уже есть — оставляю без изменений."
-        return 0
+        if [ -f /opt/clash/.ssclash/active-profile ]; then
+            replace=1
+        else
+            say "Конфиг уже есть — оставляю без изменений."
+            [ -f /opt/clash/.ss4-profile ] || printf '%s' "$prof" > /opt/clash/.ss4-profile 2>/dev/null || true
+            return 0
+        fi
     fi
+
     tmp="/tmp/ssclash-config.$$"
     say "Загрузка конфига SSClash 4 ($prof)..."
     fetch "$tmp" \
@@ -551,6 +560,10 @@ install_ss4_config() {
         "$JSD_BASE/configs/ssclash-4/$prof.yaml" \
         || { rm -f "$tmp"; say "Не удалось скачать конфиг SSClash 4 ($prof)."; return 1; }
     mkdir -p /opt/clash
+    if [ "$replace" -eq 1 ]; then
+        cp /opt/clash/config.yaml /opt/clash/config.yaml.bak 2>/dev/null || true
+        say "  прежний config.yaml (от SSClash-Go) сохранён в config.yaml.bak"
+    fi
     cp "$tmp" /opt/clash/config.yaml \
         && chmod 600 /opt/clash/config.yaml \
         || { rm -f "$tmp"; say "Не удалось записать /opt/clash/config.yaml."; return 1; }
@@ -596,7 +609,14 @@ install_go_profiles() {
         rm -f "$tmp"
     done
 
-    if [ "$had_cfg" -eq 0 ] && [ -f /opt/clash/configs/lite-direct.yaml ]; then
+    if [ -f /opt/clash/.ss4-profile ] && [ -f /opt/clash/configs/lite-direct.yaml ]; then
+        cp /opt/clash/config.yaml /opt/clash/config.yaml.bak 2>/dev/null || true
+        cp /opt/clash/configs/lite-direct.yaml /opt/clash/config.yaml
+        chmod 600 /opt/clash/config.yaml
+        printf '%s' 'lite-direct' > /opt/clash/.ssclash/active-profile
+        rm -f /opt/clash/.ss4-profile
+        say "config.yaml был от SSClash 4 — заменён на lite-direct (прежний в config.yaml.bak)"
+    elif [ "$had_cfg" -eq 0 ] && [ -f /opt/clash/configs/lite-direct.yaml ]; then
         cp /opt/clash/configs/lite-direct.yaml /opt/clash/config.yaml
         chmod 600 /opt/clash/config.yaml
         printf '%s' 'lite-direct' > /opt/clash/.ssclash/active-profile
