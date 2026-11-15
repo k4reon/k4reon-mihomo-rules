@@ -531,12 +531,17 @@ install_go_profiles() {
             "$REPO/raw/main/$rel" \
             "$JSD_BASE/$rel"
         then
-            if [ -f "/opt/clash/configs/$name.yaml" ]; then
-                cp "/opt/clash/configs/$name.yaml" "/opt/clash/configs/$name.yaml.bak" 2>/dev/null || true
+            if [ -f "/opt/clash/configs/$name.yaml" ] \
+               && has_real_subscription "/opt/clash/configs/$name.yaml"; then
+                say "  $name: содержит свою подписку — не перезаписываю"
+            else
+                if [ -f "/opt/clash/configs/$name.yaml" ]; then
+                    cp "/opt/clash/configs/$name.yaml" "/opt/clash/configs/$name.yaml.bak" 2>/dev/null || true
+                fi
+                cp "$tmp" "/opt/clash/configs/$name.yaml" \
+                    && chmod 600 "/opt/clash/configs/$name.yaml" \
+                    && say "  $name"
             fi
-            cp "$tmp" "/opt/clash/configs/$name.yaml" \
-                && chmod 600 "/opt/clash/configs/$name.yaml" \
-                && say "  $name"
         else
             say "  [!] не удалось скачать $name"
         fi
@@ -556,6 +561,23 @@ install_go_profiles() {
         return 1
     fi
     return 0
+}
+
+# true, если в proxy-providers указана своя подписка вместо заглушки
+has_real_subscription() {
+    f="$1"
+    [ -f "$f" ] || return 1
+    line="$(awk '
+        /^proxy-providers:/ { inblk = 1; next }
+        inblk && /^[^[:space:]#]/ { inblk = 0 }
+        inblk && /url:/ { print; exit }
+    ' "$f" 2>/dev/null)"
+    [ -n "$line" ] || return 1
+    case "$line" in
+        *example.com/your-subscription*) return 1 ;;
+        *http*) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 update_profiles() {
@@ -602,6 +624,12 @@ update_profiles() {
             continue
         fi
 
+        if [ -f "$target" ] && has_real_subscription "$target"; then
+            say "  $name: содержит свою подписку — не перезаписываю"
+            rm -f "$tmp"
+            continue
+        fi
+
         if [ -f "$target" ] && cmp -s "$tmp" "$target"; then
             say "  $name: без изменений"
             rm -f "$tmp"
@@ -636,7 +664,8 @@ update_profiles() {
     fi
 
     if [ "$active_changed" -eq 1 ] && [ -n "$active" ] && [ -f "$active_old" ] \
-       && [ -f /opt/clash/config.yaml ] && cmp -s /opt/clash/config.yaml "$active_old"; then
+       && [ -f /opt/clash/config.yaml ] && cmp -s /opt/clash/config.yaml "$active_old" \
+       && ! has_real_subscription /opt/clash/config.yaml; then
         if cp "/opt/clash/configs/$active.yaml" /opt/clash/config.yaml; then
             chmod 600 /opt/clash/config.yaml
             say ""
