@@ -445,6 +445,22 @@ ask_confirm_word() {
     esac
 }
 
+mem_available_mb() {
+    awk '/^MemAvailable:/ { printf "%d", $2/1024; exit }' /proc/meminfo 2>/dev/null
+}
+
+mem_swap_free_mb() {
+    awk '/^SwapFree:/ { printf "%d", $2/1024; exit }' /proc/meminfo 2>/dev/null
+}
+
+cleanup_cache() {
+    rm -rf /tmp/ssclash /tmp/clash /tmp/luci-indexcache* /tmp/luci-modulecache 2>/dev/null
+    rm -f /tmp/ss4-pkg.log 2>/dev/null
+    rm -f "$CLASH_DIR/cache.db" 2>/dev/null
+    rm -rf "$CLASH_DIR/rule-providers" "$CLASH_DIR/proxy-providers" 2>/dev/null
+    say "  кэш очищен"
+}
+
 free_mb() {
     # Свободное место на writable-overlay. Пробуем /overlay и /,
     # берём максимум: на части прошивок /overlay не отдельный mount.
@@ -1001,6 +1017,34 @@ install_go() {
         return 1
     fi
 
+    # /tmp — это tmpfs (RAM): архив ядра и распакованный бинарник лежат там
+    # одновременно, поэтому нужна память под оба.
+    if [ "$FORCE" -eq 0 ]; then
+        ram="$(mem_available_mb)"; [ -n "$ram" ] || ram=0
+        swp="$(mem_swap_free_mb)"; [ -n "$swp" ] || swp=0
+        mem_have=$(( ram + swp ))
+        case "$mode" in
+            client) mem_need=29 ;;
+            *)      mem_need=$(( $(core_size_mb) * 2 + 16 )) ;;
+        esac
+        if [ "$mem_have" -lt "$mem_need" ]; then
+            say "Мало свободной памяти: ${mem_have} МБ (RAM + swap), нужно ~${mem_need} МБ."
+            say "  Ядро распаковывается в /tmp (tmpfs) — это тоже RAM."
+            say "  Варианты: компактное ядро v1.19.24 (32 МБ) или освободить память."
+            return 1
+        fi
+        if [ "$mode" != "client" ]; then
+            tmp_have="$(free_mb /tmp)"
+            tmp_need=$(( $(core_size_mb) * 2 + 8 ))
+            if [ -n "$tmp_have" ] && [ "$tmp_have" -lt "$tmp_need" ]; then
+                say "Мало места в /tmp: ${tmp_have} МБ, нужно ~${tmp_need} МБ."
+                say "  Там одновременно лежат архив ядра и распакованный бинарник."
+                say "  Освободите /tmp или выберите компактное ядро v1.19.24."
+                return 1
+            fi
+        fi
+    fi
+
     install_deps
 
     tmp_bin="/tmp/ssclash-linux-$ARCH"
@@ -1150,6 +1194,7 @@ remove_go() {
             say "Каталог /opt/clash оставлен (удалить: --purge)."
         fi
     fi
+    cleanup_cache
     return 0
 }
 
@@ -1244,6 +1289,34 @@ install_ss4() {
         say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
         say "  Освободите место в /overlay или выберите ядро поменьше (v1.19.24 — 32 МБ)."
         return 1
+    fi
+
+    # /tmp — это tmpfs (RAM): архив ядра и распакованный бинарник лежат там
+    # одновременно, поэтому нужна память под оба.
+    if [ "$FORCE" -eq 0 ]; then
+        ram="$(mem_available_mb)"; [ -n "$ram" ] || ram=0
+        swp="$(mem_swap_free_mb)"; [ -n "$swp" ] || swp=0
+        mem_have=$(( ram + swp ))
+        case "$mode" in
+            client) mem_need=29 ;;
+            *)      mem_need=$(( $(core_size_mb) * 2 + 16 )) ;;
+        esac
+        if [ "$mem_have" -lt "$mem_need" ]; then
+            say "Мало свободной памяти: ${mem_have} МБ (RAM + swap), нужно ~${mem_need} МБ."
+            say "  Ядро распаковывается в /tmp (tmpfs) — это тоже RAM."
+            say "  Варианты: компактное ядро v1.19.24 (32 МБ) или освободить память."
+            return 1
+        fi
+        if [ "$mode" != "client" ]; then
+            tmp_have="$(free_mb /tmp)"
+            tmp_need=$(( $(core_size_mb) * 2 + 8 ))
+            if [ -n "$tmp_have" ] && [ "$tmp_have" -lt "$tmp_need" ]; then
+                say "Мало места в /tmp: ${tmp_have} МБ, нужно ~${tmp_need} МБ."
+                say "  Там одновременно лежат архив ядра и распакованный бинарник."
+                say "  Освободите /tmp или выберите компактное ядро v1.19.24."
+                return 1
+            fi
+        fi
     fi
 
     if [ "$mode" != "core" ]; then
@@ -1381,6 +1454,7 @@ remove_ss4() {
             say "Каталог /opt/clash оставлен (удалить: --purge)."
         fi
     fi
+    cleanup_cache
     return 0
 }
 
