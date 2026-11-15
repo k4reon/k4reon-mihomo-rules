@@ -33,7 +33,7 @@ DOMAIN-SUFFIX,flightradar24.com
 # boot-01/boot-02.net.anydesk.com, relays.net.anydesk.com, download.anydesk.com.
 DOMAIN-SUFFIX,anydesk.com
 DOMAIN-SUFFIX,anydesk.de
-# TCP 6568 — штатный порт AnyDesk, TCP 7070 — порт прямых соединений (P2P).
+# TCP 6568 — штатный порт AnyDesk (прямые соединения по IP без домена).
+# Порт 7070 не добавляем: он не закреплён за AnyDesk и используется другими сервисами.
 DST-PORT,6568
-DST-PORT,7070
 
