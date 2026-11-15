@@ -102,6 +102,8 @@ sniffer:
     - '+.local'
     - '+.apple.com'             # Apple: подмена ломает часть сервисов
     - '+.icloud.com'
+    - 'cloudflare-ech.com'      # ECH: заглушка Cloudflare вместо реального SNI
+    - '+.cloudflare-ech.com'
 
 # =======================
 # ANCHORS

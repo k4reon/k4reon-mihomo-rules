@@ -9,9 +9,13 @@ DIST="$ROOT/dist"
 mkdir -p "$TOOLS" "$BUILD" "$DIST"
 
 # --- 1. mihomo ---
+# Версия компилятора mrs. Не должна быть новее минимального ядра на роутерах:
+# правила собираются под 1.19.24 (компактное ядро для роутеров с малой флешью).
+MIHOMO_VERSION="${MIHOMO_VERSION:-v1.19.24}"
+
 if [ ! -x "$TOOLS/mihomo" ]; then
-  echo "Downloading latest mihomo for $(uname -s)/$(uname -m)..."
-  URL="$(curl -fsSL https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
+  echo "Downloading mihomo $MIHOMO_VERSION for $(uname -s)/$(uname -m)..."
+  URL="$(curl -fsSL "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/$MIHOMO_VERSION" \
     | grep browser_download_url \
     | grep 'linux-amd64' \
     | grep -v 'compatible' \
@@ -45,6 +49,7 @@ if [ ! -x "$TOOLS/mihomo" ]; then
 fi
 
 export MIHOMO_BIN="$TOOLS/mihomo"
+echo "Compiler: $("$MIHOMO_BIN" -v 2>/dev/null | head -n1)"
 
 # --- 2. merge public lists + local rules ---
 rm -rf "$DIST"/*

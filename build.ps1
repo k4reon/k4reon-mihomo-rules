@@ -10,9 +10,13 @@ $exe   = Join-Path $tools 'mihomo.exe'
 New-Item -ItemType Directory -Force -Path $tools, $build, $dist | Out-Null
 
 # --- 1. mihomo ---
+# Версия компилятора mrs. Не должна быть новее минимального ядра на роутерах:
+# правила собираются под 1.19.24 (компактное ядро для роутеров с малой флешью).
+$mihomoVersion = if ($env:MIHOMO_VERSION) { $env:MIHOMO_VERSION } else { 'v1.19.24' }
+
 if (-not (Test-Path $exe)) {
-    Write-Host 'Downloading latest mihomo for Windows...'
-    $release = Invoke-RestMethod 'https://api.github.com/repos/MetaCubeX/mihomo/releases/latest' `
+    Write-Host "Downloading mihomo $mihomoVersion for Windows..."
+    $release = Invoke-RestMethod "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/$mihomoVersion" `
         -Headers @{ 'User-Agent' = 'k4reon-mrs-build' }
     $asset = $release.assets |
         Where-Object { $_.name -match 'windows-amd64' -and $_.name -notmatch 'compatible' -and $_.name -like '*.zip' } |
@@ -31,6 +35,7 @@ if (-not (Test-Path $exe)) {
 }
 
 $env:MIHOMO_BIN = $exe
+& $exe -v | Select-Object -First 1
 
 # --- 2. merge public lists + local rules ---
 Remove-Item "$dist\*" -Recurse -Force -ErrorAction SilentlyContinue
