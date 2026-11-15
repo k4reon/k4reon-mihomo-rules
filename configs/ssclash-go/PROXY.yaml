@@ -112,11 +112,11 @@ sniffer:
 # ANCHORS
 # =======================
 anchors:
-  # Шаблоны rule-providers: обновление раз в 12 часов, скачивание через группу PROXY.
+  # Шаблоны rule-providers: обновление раз в 6 часов, скачивание через группу PROXY.
   # PROXY — fallback Fast→DIRECT: работает и при блокировке GitHub, и без прокси.
-  a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200, proxy: PROXY }          # домены (mrs)
-  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 43200, proxy: PROXY }          # IP-сети (mrs)
-  a3: &classical { type: http, format: text, behavior: classical, interval: 43200, proxy: PROXY }   # текст: порты, AND, custom
+  a1: &domain { type: http, format: mrs, behavior: domain, interval: 21600, proxy: PROXY }          # домены (mrs)
+  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 21600, proxy: PROXY }          # IP-сети (mrs)
+  a3: &classical { type: http, format: text, behavior: classical, interval: 21600, proxy: PROXY }   # текст: порты, AND, custom
 
 # =======================
 # PROXY PROVIDERS

@@ -233,7 +233,7 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 | Параметр | Что это | Почему так |
 |---|---|---|
 | `anchors` | шаблоны rule-providers | одна строка на тип вместо 24 повторов |
-| `interval: 43200` | обновление наборов | раз в 12 часов: списки меняются нечасто |
+| `interval: 21600` | обновление наборов | раз в 6 часов: списки меняются нечасто |
 | `proxy: PROXY` | чем качать наборы | `fallback` `Fast`→`DIRECT`: работает и при блокировке GitHub, и без прокси |
 | `proxy-providers.proxy: DIRECT` | чем качать подписку | подписка нужна до поднятия прокси, зависимость недопустима |
 | `proxy-providers.interval: 3600` | обновление подписки | раз в час: узлы меняются чаще списков |
@@ -345,13 +345,13 @@ category-ru@domain
    03:00 UTC): перекачивает публичные списки, пересобирает
    `dist/*.mrs` и `dist/lists/*.txt` и коммитит изменения, если они есть.
 2. **Дистрибутив → роутер.** mihomo обновляет `rule-providers`
-   каждые 12 часов (`interval: 43200`), подписку — каждый час
+   каждые 6 часов (`interval: 21600`), подписку — каждый час
    (`interval: 3600`). Отдельно ничего настраивать не нужно.
 
 Скачивание правил идёт через группу `PROXY`:
 
 ```yaml
-a1: &domain { type: http, format: mrs, behavior: domain, interval: 43200, proxy: PROXY }
+a1: &domain { type: http, format: mrs, behavior: domain, interval: 21600, proxy: PROXY }
 ```
 
 `proxy: PROXY` — это `fallback` из `Fast` и `DIRECT`. Поэтому:
