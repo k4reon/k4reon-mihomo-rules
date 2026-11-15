@@ -123,19 +123,22 @@ rule-providers и rules. Их можно брать целиком, а не со
 
 Две папки, в каждой по четыре профиля:
 
-**SSClash-Go** — `configs/ssclash-go/`:
+**SSClash-Go** — [`configs/ssclash-go/`](configs/ssclash-go/):
 
-- `full-proxy.yaml` — полный `MATCH,PROXY` (с геоданными);
-- `full-direct.yaml` — полный `MATCH,DIRECT` (с геоданными);
-- `lite-proxy.yaml` — без геоданных, `MATCH,PROXY`;
-- `lite-direct.yaml` — без геоданных, `MATCH,DIRECT`.
+- [`full-proxy.yaml`](configs/ssclash-go/full-proxy.yaml) — полный `MATCH,PROXY` (с геоданными);
+- [`full-direct.yaml`](configs/ssclash-go/full-direct.yaml) — полный `MATCH,DIRECT` (с геоданными);
+- [`lite-proxy.yaml`](configs/ssclash-go/lite-proxy.yaml) — без геоданных, `MATCH,PROXY`;
+- [`lite-direct.yaml`](configs/ssclash-go/lite-direct.yaml) — без геоданных, `MATCH,DIRECT`.
 
-**SSClash 4** — `configs/ssclash-4/`:
+**SSClash 4** — [`configs/ssclash-4/`](configs/ssclash-4/):
 
-- `full-proxy.yaml` — полный `MATCH,PROXY` (с геоданными);
-- `full-direct.yaml` — полный `MATCH,DIRECT` (с геоданными);
-- `lite-proxy.yaml` — без геоданных, `MATCH,PROXY`;
-- `lite-direct.yaml` — без геоданных, `MATCH,DIRECT`.
+- [`full-proxy.yaml`](configs/ssclash-4/full-proxy.yaml) — полный `MATCH,PROXY` (с геоданными);
+- [`full-direct.yaml`](configs/ssclash-4/full-direct.yaml) — полный `MATCH,DIRECT` (с геоданными);
+- [`lite-proxy.yaml`](configs/ssclash-4/lite-proxy.yaml) — без геоданных, `MATCH,PROXY`;
+- [`lite-direct.yaml`](configs/ssclash-4/lite-direct.yaml) — без геоданных, `MATCH,DIRECT`.
+
+Подробнее о профилях и отличиях lite — в
+[`configs/ssclash-go/README.md`](configs/ssclash-go/README.md).
 
 `lite` не скачивает `geoip.metadb` (8 МБ) и `GeoSite.dat` (4,2 МБ):
 `GEOIP,RU` заменён на `RULE-SET,k4reon-ru-ip`, `geosite:category-ru` —
@@ -316,8 +319,10 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 ## Как использовать
 
 **Вариант 1 — полный конфиг.**
-Для SSClash-Go: `configs/ssclash-go/{full,lite}-{proxy,direct}.yaml`.
-Для SSClash 4: `configs/ssclash-4/{full,lite}-{proxy,direct}.yaml`.
+Для SSClash-Go: [`configs/ssclash-go/`](configs/ssclash-go/) —
+`{full,lite}-{proxy,direct}.yaml`.
+Для SSClash 4: [`configs/ssclash-4/`](configs/ssclash-4/) —
+`{full,lite}-{proxy,direct}.yaml`.
 Заменить подписку и скопировать на роутер как `config.yaml`
 (или в профиль SSClash).
 
