@@ -555,17 +555,26 @@ install_ss4_config() {
         *) prof="full-direct" ;;
     esac
 
-    # Конфиг от SSClash-Go (есть .ssclash/active-profile) заменяем своим,
-    # сохранив прежний в config.yaml.bak. Свой или ручной — не трогаем.
-    replace=0
+    # Правила замены config.yaml:
+    #   - есть своя подписка          -> не трогаем;
+    #   - стоит тот же профиль        -> не трогаем;
+    #   - иначе (конфиг от SSClash-Go, другой профиль SSClash 4 или
+    #     ручной файл)                -> заменяем без резервной копии.
+    keep=0
     if [ -f /opt/clash/config.yaml ]; then
-        if [ -f /opt/clash/.ssclash/active-profile ]; then
-            replace=1
-        else
-            say "Конфиг уже есть — оставляю без изменений."
-            [ -f /opt/clash/.ss4-profile ] || printf '%s' "$prof" > /opt/clash/.ss4-profile 2>/dev/null || true
-            return 0
+        if has_real_subscription /opt/clash/config.yaml; then
+            say "Конфиг содержит свою подписку — не перезаписываю."
+            keep=1
+        elif [ -f /opt/clash/.ssclash/active-profile ]; then
+            say "Найден конфиг SSClash-Go — ставлю профиль SSClash 4."
+        elif [ -f /opt/clash/.ss4-profile ] && [ "$(cat /opt/clash/.ss4-profile 2>/dev/null)" = "$prof" ]; then
+            say "Профиль $prof уже установлен — оставляю без изменений."
+            keep=1
         fi
+    fi
+    if [ "$keep" -eq 1 ]; then
+        printf '%s' "$prof" > /opt/clash/.ss4-profile 2>/dev/null || true
+        return 0
     fi
 
     tmp="/tmp/ssclash-config.$$"
@@ -576,10 +585,6 @@ install_ss4_config() {
         "$JSD_BASE/configs/ssclash-4/$prof.yaml" \
         || { rm -f "$tmp"; say "Не удалось скачать конфиг SSClash 4 ($prof)."; return 1; }
     mkdir -p /opt/clash
-    if [ "$replace" -eq 1 ]; then
-        cp /opt/clash/config.yaml /opt/clash/config.yaml.bak 2>/dev/null || true
-        say "  прежний config.yaml (от SSClash-Go) сохранён в config.yaml.bak"
-    fi
     cp "$tmp" /opt/clash/config.yaml \
         && chmod 600 /opt/clash/config.yaml \
         || { rm -f "$tmp"; say "Не удалось записать /opt/clash/config.yaml."; return 1; }
@@ -626,12 +631,11 @@ install_go_profiles() {
     done
 
     if [ -f /opt/clash/.ss4-profile ] && [ -f /opt/clash/configs/lite-direct.yaml ]; then
-        cp /opt/clash/config.yaml /opt/clash/config.yaml.bak 2>/dev/null || true
         cp /opt/clash/configs/lite-direct.yaml /opt/clash/config.yaml
         chmod 600 /opt/clash/config.yaml
         printf '%s' 'lite-direct' > /opt/clash/.ssclash/active-profile
         rm -f /opt/clash/.ss4-profile
-        say "config.yaml был от SSClash 4 — заменён на lite-direct (прежний в config.yaml.bak)"
+        say "config.yaml был от SSClash 4 — заменён на lite-direct"
     elif [ "$had_cfg" -eq 0 ] && [ -f /opt/clash/configs/lite-direct.yaml ]; then
         cp /opt/clash/configs/lite-direct.yaml /opt/clash/config.yaml
         chmod 600 /opt/clash/config.yaml
@@ -1212,6 +1216,10 @@ install_ss4() {
         return 1
     }
 
+    if [ "$mode" != "core" ]; then
+        if ! choose_ss4_profile; then return 1; fi
+    fi
+
     install_deps
 
     tmp_pkg="/tmp/$SS4_FILE"
@@ -1249,6 +1257,13 @@ install_ss4() {
     stop_go
 
     if [ "$mode" != "core" ]; then
+        install_ss4_config || return 1
+    fi
+
+    install_core "$tmp_gz" || return 1
+    rm -f "$tmp_gz"
+
+    if [ "$mode" != "core" ]; then
         say "Установка пакета..."
         if [ "$PM" = "apk" ]; then
             apk add --allow-untrusted "$tmp_pkg" || { say "apk add не удался."; return 1; }
@@ -1257,14 +1272,6 @@ install_ss4() {
         fi
         rm -f "$tmp_pkg" /opt/clash/config.yaml-opkg
     fi
-
-    if [ "$mode" != "core" ]; then
-        if ! choose_ss4_profile; then return 1; fi
-        install_ss4_config || return 1
-    fi
-
-    install_core "$tmp_gz" || return 1
-    rm -f "$tmp_gz"
 
     if [ "$mode" = "core" ] && [ "$was_running" -eq 1 ]; then
         [ -x /etc/init.d/clash ] && /etc/init.d/clash start >/dev/null 2>&1 || true
