@@ -112,8 +112,7 @@ rule-providers и rules. Их можно брать целиком, а не со
   — Google, Steam, YouTube, Gemini, AI, Discord, Telegram, WhatsApp,
   соцсети и IP-списки;
 - [hydraponique/roscomvpn-geosite](https://cdn.jsdelivr.net/gh/hydraponique/roscomvpn-geosite/release/mihomo/)
-  и `roscomvpn-geoip` — torrent и private IP;
-- `k4reon.com/ru-whitelist` — RU-домены, перенесены в `rules/ru/domains.txt`.
+  и `roscomvpn-geoip` — torrent и private IP.
 
 [jameszeroX/zkeen-ip](https://github.com/jameszeroX/zkeen-ip) проверен,
 но не используется: `ru` — 13.5k CIDR, которые дублируют `GEOIP,RU`,
