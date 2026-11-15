@@ -25,9 +25,5 @@ DOMAIN-SUFFIX,inference.location.live.net
 
 # Misc.
 DOMAIN-SUFFIX,hdreskan47.kinozo.cam
-DOMAIN-SUFFIX,k4reon.com
-DOMAIN-SUFFIX,tvtm.one
-DOMAIN-SUFFIX,iptvx.one
-DOMAIN-SUFFIX,epg.team
 DOMAIN-SUFFIX,southwindairlines.com
 DOMAIN-SUFFIX,flightradar24.com
