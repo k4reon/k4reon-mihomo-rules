@@ -291,6 +291,17 @@ choose_core() {
     return 0
 }
 
+# Размер выбранного ядра в МБ (для проверки места до загрузки).
+core_size_mb() {
+    case "$CORE_VER" in
+        v1.19.24) printf '%s' 32 ;;
+        v1.19.25) printf '%s' 41 ;;
+        v1.19.30) printf '%s' 45 ;;
+        v1.19.31) printf '%s' 55 ;;
+        *)        printf '%s' 55 ;;
+    esac
+}
+
 normalize_ss4_profile() {
     [ -n "$SS4_PROFILE" ] || return 0
     case "$SS4_PROFILE" in
@@ -335,6 +346,7 @@ lan_ip() {
     ip="$(uci -q get network.lan.ipaddr 2>/dev/null)"
     [ -n "$ip" ] || ip="$(ip -4 addr show br-lan 2>/dev/null | sed -n 's/.*inet \([0-9.]*\)\/.*/\1/p' | head -n1)"
     [ -n "$ip" ] || ip="$(hostname -i 2>/dev/null | awk '{print $1}')"
+    ip="${ip%%/*}"
     printf '%s' "${ip:-<IP>}"
 }
 
@@ -970,15 +982,24 @@ install_go() {
 
     # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
     # не нужна. Клиент и профили пишутся в /opt/clash, там нужен запас.
+    # Сколько реально нужно: клиент ~16 МБ, плюс прирост ядра (замена
+    # освобождает старое, поэтому считается только разница), плюс запас.
     box=$(free_mb /overlay)
+    old_core_mb=0
+    [ -x "$CLASH_BIN" ] && old_core_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
+    delta_core=$(( $(core_size_mb) - old_core_mb ))
+    [ "$delta_core" -lt 0 ] && delta_core=0
     case "$mode" in
-        core) need_mb=3 ;;
-        *)    need_mb=20 ;;
+        core)   need_mb=$(( delta_core + 2 )) ;;
+        client) need_mb=16 ;;
+        *)      need_mb=$(( 16 + delta_core + 2 )) ;;
     esac
-    [ -n "$box" ] && [ "$box" -lt "$need_mb" ] && {
-        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~${need_mb} МБ."
+    [ "$need_mb" -lt 4 ] && need_mb=4
+    if [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
+        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
+        say "  Освободите место в /overlay или выберите ядро поменьше (v1.19.24 — 32 МБ)."
         return 1
-    }
+    fi
 
     install_deps
 
@@ -1206,15 +1227,24 @@ install_ss4() {
 
     # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
     # не нужна. Клиент и профили пишутся в /opt/clash, там нужен запас.
+    # Сколько реально нужно: клиент ~16 МБ, плюс прирост ядра (замена
+    # освобождает старое, поэтому считается только разница), плюс запас.
     box=$(free_mb /overlay)
+    old_core_mb=0
+    [ -x "$CLASH_BIN" ] && old_core_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
+    delta_core=$(( $(core_size_mb) - old_core_mb ))
+    [ "$delta_core" -lt 0 ] && delta_core=0
     case "$mode" in
-        core) need_mb=3 ;;
-        *)    need_mb=20 ;;
+        core)   need_mb=$(( delta_core + 2 )) ;;
+        client) need_mb=16 ;;
+        *)      need_mb=$(( 16 + delta_core + 2 )) ;;
     esac
-    [ -n "$box" ] && [ "$box" -lt "$need_mb" ] && {
-        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно минимум ~${need_mb} МБ."
+    [ "$need_mb" -lt 4 ] && need_mb=4
+    if [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
+        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
+        say "  Освободите место в /overlay или выберите ядро поменьше (v1.19.24 — 32 МБ)."
         return 1
-    }
+    fi
 
     if [ "$mode" != "core" ]; then
         if ! choose_ss4_profile; then return 1; fi
