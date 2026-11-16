@@ -74,10 +74,10 @@ dns:
     - 'https://1.1.1.1/dns-query#Fast'
 
   nameserver-policy:            # исключения: какой домен резолвить где
-    '+.lan': system             # локальная сеть — системный DNS
-    '+.local': system           # mDNS-домены — системный DNS
-    "+.kion.ru": system         # KION: системный DNS, чтобы работал в РФ
-    "+.wink.ru": system         # Wink: то же
+    '+.lan': 127.0.0.1          # локальная сеть — dnsmasq на роутере
+    '+.local': 127.0.0.1        # mDNS-домены — dnsmasq на роутере
+    "+.kion.ru": [77.88.8.8, 77.88.8.1]  # KION: Яндекс DNS, чтобы работал в РФ
+    "+.wink.ru": [77.88.8.8, 77.88.8.1]  # Wink: то же
     'geosite:category-ru': [77.88.8.8, 77.88.8.1]                 # RU-сервисы — DNS Яндекса
     'rule-set:k4reon-ai-domains': 'https://1.1.1.1/dns-query#Ai'  # AI — DoH через группу Ai
 
