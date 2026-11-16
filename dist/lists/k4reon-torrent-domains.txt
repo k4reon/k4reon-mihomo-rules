@@ -23,6 +23,7 @@
 +.anidex.moe
 +.announce.augrains.com
 +.api.bitumconference.ru
++.archive.torrentonline.cc
 +.aruacfilmes.com.br
 +.asger.xyz
 +.atrack.pow7.com
@@ -113,7 +114,6 @@
 +.inferno.demonoid.is
 +.inferno.demonoid.pw
 +.ipv4announce.sktorrent.eu
-+.ipv6.govt.hu
 +.jsb.by
 +.kanal-4.de
 +.kinorun.com
@@ -212,6 +212,7 @@
 +.shnflac.net
 +.shubt.net
 +.siambt.com
++.stairs.lat
 +.sukebei.tracker.wf
 +.t.213891.xyz
 +.t.acg.rip
@@ -315,12 +316,10 @@
 +.tracker.eu.org
 +.tracker.evergarden.uk
 +.tracker.ex.ua
-+.tracker.farted.net
 +.tracker.filemail.com
 +.tracker.filepit.to
 +.tracker.files.fm
 +.tracker.flashtorrents.org
-+.tracker.flatuslifir.is
 +.tracker.fnix.net
 +.tracker.foreverpirates.co
 +.tracker.fortu.io
@@ -342,7 +341,6 @@
 +.tracker.internetwarriors.net
 +.tracker.ipv6tracker.org
 +.tracker.ipv6tracker.ru
-+.tracker.k.vu
 +.tracker.kali.org
 +.tracker.kamigami.org
 +.tracker.kuroy.me
