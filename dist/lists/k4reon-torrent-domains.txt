@@ -259,7 +259,6 @@
 +.tr.ready4.icu
 +.tr.zukizuki.org
 +.tr2.ysagin.top
-+.tr3.ysagin.top
 +.tr4ck3r.duckdns.org
 +.tracker-udp.gbitt.info
 +.tracker-v6.zooki.xyz
@@ -320,6 +319,7 @@
 +.tracker.filepit.to
 +.tracker.files.fm
 +.tracker.flashtorrents.org
++.tracker.flatuslifir.is
 +.tracker.fnix.net
 +.tracker.foreverpirates.co
 +.tracker.fortu.io
