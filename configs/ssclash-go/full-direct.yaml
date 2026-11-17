@@ -231,6 +231,7 @@ rule-providers:
   k4reon-social-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-domains.mrs }
   k4reon-social-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-social-ip.mrs }
   k4reon-custom-proxy: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-custom-proxy.txt }
+  k4reon-comnet-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-comnet-domains.mrs }
 
 # =======================
 # RULES
@@ -261,6 +262,9 @@ rules:
 
   # Custom override: must be before RU rules, otherwise DOMAIN-SUFFIX,ru wins
   - RULE-SET,k4reon-custom-proxy,PROXY
+
+  # --- ComNet (доп. домены под прокси) ---
+  - RULE-SET,k4reon-comnet-domains,PROXY
 
   # --- YouTube ---
   - RULE-SET,k4reon-youtube-domains,YouTube

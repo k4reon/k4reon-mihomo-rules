@@ -91,5 +91,8 @@
     "ipcidr": [
       { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Mihomo/Game_IP.mrs", "format": "mrs" }
     ]
+  },
+  "comnet": {
+    "domains": []
   }
 }
