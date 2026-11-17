@@ -90,10 +90,10 @@ done
 
 # ---------------- версии и адреса --------------------------------
 
-GO_VER="7.7.2"
-GO_TAG="v7.7.2"
-GO_SHA="3e3df454aabf274b40dd26449759c3777277b1cadc2138647f9de5c86cf61848"
-GO_SVC_SHA="ba8596f9dd22896bb2673521c6273000d275f8a494ea8550c2b15e6ade207c10"
+GO_VER="7.7.4"
+GO_TAG="v7.7.4"
+GO_SHA="d26f1aa6e25124c7da6d06b2cbdcb1feaa73d5da09cb5aabebeb212bc1e23394"
+GO_SVC_SHA="5f6d761e2df4152229c7795d5eabc03db924925a7ec2322af5bb087dadba33b5"
 
 SS4_VER="4.7.1"
 SS4_TAG="v4.7.1"
