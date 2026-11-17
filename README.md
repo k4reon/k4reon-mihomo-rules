@@ -176,7 +176,8 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 
 **DNS**
 - обычные запросы — DoH через группу `PROXY`;
-- `.lan`, `.local`, `kion.ru`, `wink.ru` — системный DNS;
+- `.lan`, `.local` — `127.0.0.1` (dnsmasq роутера);
+- `kion.ru`, `wink.ru` — Яндекс DNS (`77.88.8.8/77.88.8.1`);
 - `geosite:category-ru` — российские DNS (Yandex), чтобы RU-сервисы
   не зависели от прокси;
 - `rule-set:k4reon-ai-domains` — DNS для AI через группу `Ai`;
@@ -232,7 +233,7 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 | `default-nameserver` | бутстрап | резолвит адреса самих DoH-серверов |
 | `proxy-server-nameserver` | резолв адресов прокси | нужен до поднятия прокси, поэтому отдельный список |
 | `nameserver` (`#Fast`) | обычные запросы | DoH через группу `Fast`, чтобы не зависеть от DNS провайдера |
-| `nameserver-policy` | исключения | `+.lan`/`+.local` — системный DNS; `kion.ru`/`wink.ru` — системный; `category-ru` — DNS Яндекса; AI — DoH через `Ai` |
+| `nameserver-policy` | исключения | `+.lan`/`+.local` — `127.0.0.1` (dnsmasq); `+.kion.ru`/`+.wink.ru` — Яндекс DNS; `category-ru` — DNS Яндекса; AI — DoH через `Ai` |
 
 **Sniffer**
 
