@@ -2,7 +2,6 @@
 +.app-api.imglib.info
 +.astar.bz
 +.exhentai-dono.me
-+.geforce.com
 +.h-chan.me
 +.handy.computer
 +.hcaptcha.com
@@ -13,8 +12,6 @@
 +.imgschan.xyz
 +.logitech.io
 +.msi.com
-+.nvidia.com
-+.nvidiagrid.net
 +.palworld.gg
 +.warframe.com
 +.xnxx-cdn.com

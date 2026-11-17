@@ -277,6 +277,7 @@
 +.gateway-sy.catmjstudio.com
 +.gateway-sy.maj-soul.com
 +.gateway-v2.maj-soul.com
++.geforce.com
 +.genshinimpact.com
 +.ghostgames.com
 +.giratina.com
@@ -513,6 +514,7 @@
 +.notify.ppy.sh
 +.noxygames.com
 +.nvidia.com
++.nvidiagrid.net
 +.offworldindustries.com
 +.offworldindustries.net
 +.omotenashi.cygames.jp
