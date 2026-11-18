@@ -24,6 +24,7 @@
 #    sh install-ssclash.sh --go --client --yes   # только клиент
 #    sh install-ssclash.sh --go --client-update --yes  # обновить клиент (без профилей)
 #    sh install-ssclash.sh --go --core --yes     # только ядро
+#    sh install-ssclash.sh --go --core --yes --upx  # ядро сжатое UPX (меньше flash)
 #    sh install-ssclash.sh --go --core --yes --force  # переустановить ту же версию
 #    sh install-ssclash.sh --status       # состояние
 #    sh install-ssclash.sh --memory       # лимиты памяти GOGC/GOMEMLIMIT
@@ -46,6 +47,7 @@ FORCE=0
 MEMORY_ONLY=0
 PURGE=0
 PROFILES_ONLY=0
+USE_UPX=0
 VARIANT=""
 MODE="full"
 FROM_DIR=""
@@ -79,6 +81,7 @@ while [ $# -gt 0 ]; do
         --ss4-profile=*) SS4_PROFILE="${1#*=}" ;;
         --from)      FROM_DIR="${2:-}"; shift ;;
         --from=*)    FROM_DIR="${1#*=}" ;;
+        --upx)       USE_UPX=1 ;;
         --help|-h)
             sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
@@ -513,6 +516,72 @@ free_mb() {
     printf '%s' "${best:-0}"
 }
 
+upx_binary() { printf '%s' "/tmp/upx"; }
+
+upx_installed() { [ -x "$(upx_binary)" ]; }
+
+# Скачиваем UPX для linux/arm64, если его ещё нет. UPX нужен для сжатия ядра
+# Mihomo на роутерах с маленькой флеш-памятью (например, 32 МБ → ~10 МБ).
+install_upx() {
+    local tmp_dir upx_url upx_tar
+    upx_url="https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-arm64_linux.tar.xz"
+    upx_tar="/tmp/upx-4.2.4-arm64_linux.tar.xz"
+
+    if upx_installed; then
+        return 0
+    fi
+
+    say "  скачивание UPX для сжатия ядра..."
+    if ! fetch "$upx_tar" "$upx_url"; then
+        say "  не удалось скачать UPX"
+        return 1
+    fi
+
+    tmp_dir="/tmp/upx-$$"
+    mkdir -p "$tmp_dir"
+    if ! (cd "$tmp_dir" && tar -xf "$upx_tar" 2>/dev/null); then
+        say "  не удалось распаковать UPX"
+        rm -rf "$tmp_dir" "$upx_tar"
+        return 1
+    fi
+
+    find "$tmp_dir" -name 'upx' -type f -exec cp {} "$(upx_binary)" \; 2>/dev/null
+    rm -rf "$tmp_dir" "$upx_tar"
+
+    if ! chmod +x "$(upx_binary)" 2>/dev/null || ! "$(upx_binary)" --version >/dev/null 2>&1; then
+        rm -f "$(upx_binary)"
+        say "  UPX не работает"
+        return 1
+    fi
+
+    say "  UPX готов"
+    return 0
+}
+
+# Сжимаем бинарник ядра UPX, если включено. Возвращает 0 при успехе.
+compress_core_upx() {
+    local bin
+    bin="$1"
+    [ -n "$bin" ] || return 1
+    [ -f "$bin" ] || return 1
+
+    if ! install_upx; then
+        say "  не удалось подготовить UPX — ядро будет обычного размера"
+        return 1
+    fi
+
+    local before after
+    before="$(wc -c < "$bin" | awk '{print $1}')"
+    say "  сжатие ядра UPX ($(($before / 1024 / 1024)) МБ → ...)"
+    if ! "$(upx_binary)" --best -q "$bin" >/dev/null 2>&1; then
+        say "  сжатие UPX не удалось"
+        return 1
+    fi
+    after="$(wc -c < "$bin" | awk '{print $1}')"
+    say "  ядро сжато: $((before / 1024 / 1024)) МБ → $((after / 1024 / 1024)) МБ"
+    return 0
+}
+
 stop_go() {
     [ -x /etc/init.d/ssclash ] && /etc/init.d/ssclash stop >/dev/null 2>&1
     sleep 1
@@ -568,6 +637,22 @@ install_core() {
         rm -f /tmp/clash.new
         return 1
     }
+
+    # Если включено UPX, сжимаем ядро перед установкой — полезно для
+    # роутеров с маленькой флеш-памятью (32 МБ → ~10 МБ).
+    if [ "$USE_UPX" -eq 1 ]; then
+        compress_core_upx /tmp/clash.new || {
+            say "  UPX не сработал — отмена установки сжатого ядра."
+            rm -f /tmp/clash.new
+            return 1
+        }
+        # После сжатия повторно проверяем, что бинарник запускается.
+        /tmp/clash.new -v >/dev/null 2>&1 || {
+            say "Сжатое ядро не запускается — оставляю старое."
+            rm -f /tmp/clash.new
+            return 1
+        }
+    fi
 
     # Проверяем совместимость с текущим конфигом ДО замены: если новое ядро
     # не понимает config.yaml, старое остаётся на месте целым и невредимым.
@@ -1037,7 +1122,13 @@ install_go() {
     box=$(free_mb /overlay)
     old_core_mb=0
     [ -x "$CLASH_BIN" ] && old_core_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
-    delta_core=$(( $(core_size_mb) - old_core_mb ))
+    # При UPX ядро занимает ~10 МБ вместо 32–55 МБ.
+    if [ "$USE_UPX" -eq 1 ]; then
+        core_mb=12
+    else
+        core_mb=$(core_size_mb)
+    fi
+    delta_core=$(( core_mb - old_core_mb ))
     [ "$delta_core" -lt 0 ] && delta_core=0
     case "$mode" in
         core)   need_mb=$(( delta_core + 2 )) ;;
@@ -1046,8 +1137,14 @@ install_go() {
     esac
     [ "$need_mb" -lt 4 ] && need_mb=4
     if [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
-        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
-        say "  Освободите место в /overlay или выберите ядро поменьше (v1.19.24 — 32 МБ)."
+        if [ "$USE_UPX" -eq 1 ]; then
+            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
+            say "  Даже сжатое ядро UPX не влезает. Освободите место или используйте extroot."
+        else
+            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
+            say "  Освободите место в /overlay, выберите ядро поменьше (v1.19.24 — 32 МБ)"
+            say "  или используйте сжатое ядро UPX (меню 9 / флаг --upx)."
+        fi
         return 1
     fi
 
@@ -1311,7 +1408,13 @@ install_ss4() {
     box=$(free_mb /overlay)
     old_core_mb=0
     [ -x "$CLASH_BIN" ] && old_core_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
-    delta_core=$(( $(core_size_mb) - old_core_mb ))
+    # При UPX ядро занимает ~10 МБ вместо 32–55 МБ.
+    if [ "$USE_UPX" -eq 1 ]; then
+        core_mb=12
+    else
+        core_mb=$(core_size_mb)
+    fi
+    delta_core=$(( core_mb - old_core_mb ))
     [ "$delta_core" -lt 0 ] && delta_core=0
     case "$mode" in
         core)   need_mb=$(( delta_core + 2 )) ;;
@@ -1320,8 +1423,14 @@ install_ss4() {
     esac
     [ "$need_mb" -lt 4 ] && need_mb=4
     if [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
-        say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
-        say "  Освободите место в /overlay или выберите ядро поменьше (v1.19.24 — 32 МБ)."
+        if [ "$USE_UPX" -eq 1 ]; then
+            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
+            say "  Даже сжатое ядро UPX не влезает. Освободите место или используйте extroot."
+        else
+            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
+            say "  Освободите место в /overlay, выберите ядро поменьше (v1.19.24 — 32 МБ)"
+            say "  или используйте сжатое ядро UPX (меню 9 / флаг --upx)."
+        fi
         return 1
     fi
 
@@ -1615,6 +1724,7 @@ if [ "$run_go_menu" = "1" ]; then
         say "  6) Проверить состояние"
         say "  7) Удалить SSClash-Go"
         say "  8) Обновить профили конфигурации"
+        say "  9) Установить/обновить ядро сжатое UPX (для малого flash)"
         say "  0) Назад"
         printf 'Выбор: '
         read choice
@@ -1704,8 +1814,27 @@ if [ "$run_go_menu" = "1" ]; then
             6)    show_status ;;
             7)    remove_go ;;
             8)    update_profiles ;;
+            9)
+                if go_installed; then
+                    USE_UPX=1
+                    cv="$(core_version)"
+                    if [ -z "$cv" ]; then
+                        if choose_core; then
+                            install_go core
+                            set_core "$CORE_DEFAULT"
+                        fi
+                    else
+                        set_core "$CORE_DEFAULT"
+                        say "Обновление ядра UPX: $cv → $CORE_VER"
+                        install_go core
+                    fi
+                    USE_UPX=0
+                else
+                    say "Сначала установите клиент (пункт 2)."
+                fi
+                ;;
             0)    break ;;
-            *)    say "Введите 1–8 или 0." ;;
+            *)    say "Введите 1–9 или 0." ;;
         esac
     done
 else
