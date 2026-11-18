@@ -161,11 +161,10 @@ proxy-providers:
 # YouTube/Ai/Discord/Messengers — fallback по своим сервисам.
 # Games — select с DIRECT по умолчанию (игры чаще лучше напрямую).
 proxy-groups:
-  - name: PROXY    # общий выход: fallback Fast → DIRECT
+  - name: PROXY    # общий выход: fallback по всем узлам, empty-fallback DIRECT
     type: fallback
-    proxies:
-      - Fast
-      - DIRECT
+    include-all: true
+    empty-fallback: DIRECT
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     timeout: 5000

@@ -136,11 +136,10 @@ proxy-providers:
 # Группы те же, что в PROXY-профиле: даже при MATCH,DIRECT
 # игры/YouTube/Discord/AI/мессенджеры должны иметь свой выход.
 proxy-groups:
-  - name: PROXY    # общий выход: fallback Fast → DIRECT
+  - name: PROXY    # общий выход: fallback по всем узлам, empty-fallback DIRECT
     type: fallback
-    proxies:
-      - Fast
-      - DIRECT
+    include-all: true
+    empty-fallback: DIRECT
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     timeout: 5000
