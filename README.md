@@ -134,6 +134,11 @@ rule-providers и rules. Их можно брать целиком, а не со
 - `lite-proxy.yaml` — без геоданных, `MATCH,PROXY`;
 - `lite-direct.yaml` — без геоданных, `MATCH,DIRECT`.
 
+В direct-профилях `torrent` и `torrent-ip` стоят сразу после рекламы,
+до `custom-proxy` и сервисных групп: иначе торрент-домен может совпасть
+с `social`/`AI`/`YouTube` и уйти через Remnawave, где сработает
+торрент-блокер.
+
 **SSClash 4** — [`configs/ssclash-4/`](configs/ssclash-4/):
 
 - `full-proxy.yaml` — полный `MATCH,PROXY` (с геоданными);

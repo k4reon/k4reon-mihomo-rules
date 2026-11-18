@@ -34,7 +34,8 @@
 ## Чем отличается PROXY и DIRECT
 
 - `*-proxy.yaml` — полный набор правил, включая RU-IP и Google direct;
-- `*-direct.yaml` — без RU/private/torrent/google/custom-direct:
+- `*-direct.yaml` — без RU/private/google/custom-direct; `torrent` и
+  `torrent-ip` добавлены, чтобы P2P не попал в прокси-группы:
   всё остальное закрывает `MATCH,DIRECT`.
 
 ## Что проверить на роутере

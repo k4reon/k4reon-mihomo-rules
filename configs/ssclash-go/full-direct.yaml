@@ -205,6 +205,8 @@ proxy-groups:
 # Только проксируемые категории + реклама (шаблоны — в anchors).
 rule-providers:
   k4reon-ads-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ads-domains.mrs }
+  k4reon-torrent-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-torrent-domains.mrs }
+  k4reon-torrent-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-torrent-ip.mrs }
   k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-domains.mrs }
   k4reon-youtube-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-ip.mrs }
   k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
@@ -239,6 +241,8 @@ rules:
   # no-resolve — не резолвить домен ради IP-правила: быстрее и меньше DNS-запросов
   # --- Реклама ---
   - RULE-SET,k4reon-ads-domains,REJECT
+  - RULE-SET,k4reon-torrent-domains,DIRECT
+  - RULE-SET,k4reon-torrent-ip,DIRECT,no-resolve
 
   # --- Исключения устройств (примеры: раскомментировать и указать свои IP) ---
   # SRC-IP-CIDR — трафик ОТ устройства, IP-CIDR — трафик К устройству.
