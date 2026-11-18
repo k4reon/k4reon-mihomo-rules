@@ -636,14 +636,18 @@ install_core() {
     new_mb=$(( $(wc -c < /tmp/clash.new 2>/dev/null || echo 0) / 1048576 + 1 ))
     old_mb=0
     [ -x "$CLASH_BIN" ] && old_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
-    avail=$(free_mb /overlay)
-    need_mb=$(( new_mb - old_mb ))
-    [ "$need_mb" -lt 1 ] && need_mb=1
-    if [ -n "$avail" ] && [ "$avail" -lt "$need_mb" ]; then
-        say "  [!] для замены ядра нужно ~${need_mb} МБ свободно, сейчас ${avail} МБ."
-        say "      установка отменена, старое ядро не тронуто."
-        rm -f /tmp/clash.new
-        return 1
+    # Для базового ядра v1.19.24 проверку места не делаем — позволяем
+    # ставить вплоть до полного заполнения флеш-памяти.
+    if [ "$CORE_VER" != "v1.19.24" ]; then
+        avail=$(free_mb /overlay)
+        need_mb=$(( new_mb - old_mb ))
+        [ "$need_mb" -lt 1 ] && need_mb=1
+        if [ -n "$avail" ] && [ "$avail" -lt "$need_mb" ]; then
+            say "  [!] для замены ядра нужно ~${need_mb} МБ свободно, сейчас ${avail} МБ."
+            say "      установка отменена, старое ядро не тронуто."
+            rm -f /tmp/clash.new
+            return 1
+        fi
     fi
 
     make_dirs
@@ -1103,7 +1107,8 @@ install_go() {
         *)      need_mb=$(( 16 + delta_core + 2 )) ;;
     esac
     [ "$need_mb" -lt 4 ] && need_mb=4
-    if [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
+    # Для базового ядра v1.19.24 не блокируем установку по свободному месту.
+    if [ "$CORE_VER" != "v1.19.24" ] && [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
         if [ "$USE_UPX" -eq 1 ]; then
             say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
             say "  Даже сжатое ядро UPX не влезает. Освободите место или используйте extroot."
@@ -1389,7 +1394,8 @@ install_ss4() {
         *)      need_mb=$(( 16 + delta_core + 2 )) ;;
     esac
     [ "$need_mb" -lt 4 ] && need_mb=4
-    if [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
+    # Для базового ядра v1.19.24 не блокируем установку по свободному месту.
+    if [ "$CORE_VER" != "v1.19.24" ] && [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
         if [ "$USE_UPX" -eq 1 ]; then
             say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
             say "  Даже сжатое ядро UPX не влезает. Освободите место или используйте extroot."
