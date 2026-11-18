@@ -1736,22 +1736,18 @@ if [ "$run_go_menu" = "1" ]; then
                 fi
                 ;;
             4)
-                if go_installed; then
-                    if choose_core; then
-                        if [ "$DRY_RUN" -eq 0 ] && [ -x "$CLASH_BIN" ] && [ "$(core_version)" = "$CORE_VER" ]; then
-                            say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
-                            if ask_yes "Переустановить принудительно?"; then
-                                FORCE=1
-                                install_go core
-                            fi
-                        else
+                if choose_core; then
+                    if [ "$DRY_RUN" -eq 0 ] && [ -x "$CLASH_BIN" ] && [ "$(core_version)" = "$CORE_VER" ]; then
+                        say "Ядро Mihomo $CORE_VER уже установлено — обновление не требуется."
+                        if ask_yes "Переустановить принудительно?"; then
+                            FORCE=1
                             install_go core
                         fi
-                        # выбор версии разовый: дальше «целевая» — последняя
-                        set_core "$CORE_DEFAULT"
+                    else
+                        install_go core
                     fi
-                else
-                    say "Сначала установите клиент (пункт 2)."
+                    # выбор версии разовый: дальше «целевая» — последняя
+                    set_core "$CORE_DEFAULT"
                 fi
                 ;;
             5)
