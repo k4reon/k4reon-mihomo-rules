@@ -69,9 +69,9 @@ dns:
     - 77.88.8.8
     - 8.8.8.8
 
-  nameserver:                   # обычные запросы — DoH через группу Fast (прокси)
-    - 'https://dns.quad9.net/dns-query#Fast'
-    - 'https://1.1.1.1/dns-query#Fast'
+  nameserver:                   # обычные запросы — DoH напрямую
+    - 'https://dns.quad9.net/dns-query'
+    - 'https://1.1.1.1/dns-query'
 
   nameserver-policy:            # исключения: какой домен резолвить где
     '+.lan': 127.0.0.1          # локальная сеть — dnsmasq на роутере
@@ -106,11 +106,10 @@ sniffer:
 # ANCHORS
 # =======================
 anchors:
-  # Шаблоны rule-providers: обновление раз в 6 часов, скачивание через группу PROXY.
-  # PROXY — fallback Fast→DIRECT: работает и при блокировке GitHub, и без прокси.
-  a1: &domain { type: http, format: mrs, behavior: domain, interval: 21600, proxy: PROXY }          # домены (mrs)
-  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 21600, proxy: PROXY }          # IP-сети (mrs)
-  a3: &classical { type: http, format: text, behavior: classical, interval: 21600, proxy: PROXY }   # текст: порты, AND, custom
+  # Шаблоны rule-providers: обновление раз в 6 часов, скачивание напрямую.
+  a1: &domain { type: http, format: mrs, behavior: domain, interval: 21600 }          # домены (mrs)
+  a2: &ipcidr { type: http, format: mrs, behavior: ipcidr, interval: 21600 }          # IP-сети (mrs)
+  a3: &classical { type: http, format: text, behavior: classical, interval: 21600 }   # текст: порты, AND, custom
 
 # =======================
 # PROXY PROVIDERS
@@ -136,27 +135,17 @@ proxy-providers:
 # Группы те же, что в PROXY-профиле: даже при MATCH,DIRECT
 # игры/YouTube/Discord/AI/мессенджеры должны иметь свой выход.
 proxy-groups:
-  - name: PROXY    # общий выход: fallback Fast → DIRECT
-    type: fallback
-    proxies:
-      - Fast
-      - DIRECT
-    url: http://www.gstatic.com/generate_204
-    interval: 600
-    timeout: 5000
-    lazy: true
-    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Global.png
-
-  - name: Fast    # авто-выбор лучшего узла по задержке (url-test)
+  - name: AUTO    # авто-выбор лучшего узла по задержке (url-test)
     type: url-test
     include-all: true
+    empty-fallback: DIRECT
     #filter: "^(?!.*(🇷🇺)).*$"
     url: http://www.gstatic.com/generate_204
-    interval: 600
+    interval: 300
     tolerance: 50
-    timeout: 5000
+    timeout: 2000
     lazy: false
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Rocket.png
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Auto.png
 
   - name: YouTube    # отдельный выход для YouTube (fallback)
     type: fallback
@@ -207,7 +196,7 @@ proxy-groups:
     type: select
     hidden: true
     proxies:
-      - PROXY
+      - AUTO
       - DIRECT
 
 # =======================
@@ -238,13 +227,13 @@ rule-providers:
 # =======================
 # Порядок:
 #  1. ads → REJECT
-#  2. custom-proxy → PROXY
+#  2. custom-proxy → AUTO
 #  3. youtube → YouTube
 #  4. games → Games (IP только для UDP)
 #  5. discord → Discord
 #  6. ai → Ai
 #  7. messengers → Messengers
-#  8. social → Fast
+#  8. social → AUTO
 #  9. MATCH → DIRECT
 rules:
   # no-resolve — не резолвить домен ради IP-правила: быстрее и меньше DNS-запросов
@@ -261,10 +250,10 @@ rules:
   #- IP-CIDR,IP устройства/32,DIRECT # к устройству
 
   # Custom override: must be before RU rules, otherwise DOMAIN-SUFFIX,ru wins
-  - RULE-SET,k4reon-custom-proxy,PROXY
+  - RULE-SET,k4reon-custom-proxy,AUTO
 
   # --- ComNet (доп. домены под прокси) ---
-  - RULE-SET,k4reon-comnet-domains,PROXY
+  - RULE-SET,k4reon-comnet-domains,AUTO
 
   # --- YouTube ---
   - RULE-SET,k4reon-youtube-domains,YouTube
@@ -290,8 +279,8 @@ rules:
   - RULE-SET,k4reon-messengers-ip,Messengers,no-resolve
 
   # --- Соцсети ---
-  - RULE-SET,k4reon-social-domains,Fast
-  - RULE-SET,k4reon-social-ip,Fast,no-resolve
+  - RULE-SET,k4reon-social-domains,AUTO
+  - RULE-SET,k4reon-social-ip,AUTO,no-resolve
 
   # --- Всё остальное ---
   - MATCH,DIRECT
