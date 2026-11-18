@@ -4,9 +4,9 @@
 
 | Файл | Правила | Геоданные | Для чего |
 |---|---|---|---|
-| `full-proxy.yaml` | `MATCH,PROXY` | `geoip` / `geosite` | роутер с запасом флеша |
+| `full-proxy.yaml` | `MATCH,AUTO` | `geoip` / `geosite` | роутер с запасом флеша |
 | `full-direct.yaml` | `MATCH,DIRECT` | `geoip` / `geosite` | всё напрямую |
-| `lite-proxy.yaml` | `MATCH,PROXY` | без геоданных | 44–128 МБ флеша |
+| `lite-proxy.yaml` | `MATCH,AUTO` | без геоданных | 44–128 МБ флеша |
 | `lite-direct.yaml` | `MATCH,DIRECT` | без геоданных | 44–128 МБ флеша |
 
 ## Чем lite отличается от full
