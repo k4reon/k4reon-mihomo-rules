@@ -249,39 +249,6 @@ core_version() {
     "$CLASH_BIN" -v 2>/dev/null | grep -o 'v[0-9][0-9.]*' | head -n1
 }
 
-# Подтягиваем последний релиз SSClash-Go с GitHub, чтобы скрипт не застревал
-# на захардкоженной версии, когда вышла новая.
-init_go_version() {
-    local tmp_json tmp_sha tag new_base
-    tmp_json="/tmp/ssclash-go-latest.json"
-    if ! fetch_github "$tmp_json" "https://api.github.com/repos/zerolabnet/SSClash-Go/releases/latest"; then
-        say "  не удалось узнать последнюю версию SSClash-Go — используется $GO_VER"
-        return 0
-    fi
-    tag="$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$tmp_json" | head -n1)"
-    rm -f "$tmp_json"
-    [ -n "$tag" ] || return 0
-
-    GO_TAG="$tag"
-    GO_VER="${tag#v}"
-    new_base="https://github.com/zerolabnet/SSClash-Go/releases/download/$GO_TAG"
-    GO_BASE="$new_base"
-
-    tmp_sha="/tmp/ssclash-go-sha256sums.txt"
-    if fetch_github "$tmp_sha" "$new_base/sha256sums.txt"; then
-        GO_SHA="$(awk -v f="ssclash-linux-$ARCH" '$2 == f {print $1}' "$tmp_sha")"
-        GO_SVC_SHA="$(awk -v f="ssclash-openwrt-service.tar.gz" '$2 == f {print $1}' "$tmp_sha")"
-        rm -f "$tmp_sha"
-    else
-        say "  предупреждение: не удалось скачать sha256sums.txt для $GO_VER — проверка SHA отключена"
-        GO_SHA=""
-        GO_SVC_SHA=""
-    fi
-}
-
-# Подтягиваем актуальную версию SSClash-Go с GitHub (при наличии сети).
-init_go_version
-
 set_core() {
     ver="$1"
     case "$ver" in
