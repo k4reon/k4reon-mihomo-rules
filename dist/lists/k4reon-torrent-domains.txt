@@ -251,7 +251,6 @@
 +.tp.m-team.cc
 +.tr.abiir.top
 +.tr.bangumi.moe
-+.tr.burnabyhighstar.com
 +.tr.cili001.com
 +.tr.highstar.shop
 +.tr.kxmp.cf
@@ -259,6 +258,7 @@
 +.tr.ready4.icu
 +.tr.zukizuki.org
 +.tr2.ysagin.top
++.tr3.ysagin.top
 +.tr4ck3r.duckdns.org
 +.tracker-udp.gbitt.info
 +.tracker-v6.zooki.xyz
@@ -278,7 +278,6 @@
 +.tracker.anirena.com
 +.tracker.anonwebz.xyz
 +.tracker.army
-+.tracker.aruku.ovh
 +.tracker.augrains.com
 +.tracker.baltracker.net
 +.tracker.beeimg.com
@@ -293,6 +292,7 @@
 +.tracker.btnext.com
 +.tracker.btsync.gq
 +.tracker.bz
++.tracker.cangku.moe
 +.tracker.cn.nyaa.net
 +.tracker.coppersurfer.tk
 +.tracker.corpscorp.online
@@ -319,7 +319,6 @@
 +.tracker.filepit.to
 +.tracker.files.fm
 +.tracker.flashtorrents.org
-+.tracker.flatuslifir.is
 +.tracker.fnix.net
 +.tracker.foreverpirates.co
 +.tracker.fortu.io
@@ -387,7 +386,6 @@
 +.tracker.qu.ax
 +.tracker.renfei.net
 +.tracker.sbsub.com
-+.tracker.sela.st
 +.tracker.shkinev.me
 +.tracker.skynetcloud.site
 +.tracker.skyts.net
@@ -476,6 +474,7 @@
 +.wepzone.net
 +.whybother.torrentonline.cc
 +.worldboxingvideoarchive.com
++.www.all4nothin.net
 +.www.wareztorrent.com
 +.xwt-classics.net
 +.xxxtor.com
