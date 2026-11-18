@@ -146,10 +146,11 @@ proxy-providers:
 # YouTube/Ai/Discord/Messengers — fallback по своим сервисам.
 # Games — select с DIRECT по умолчанию (игры чаще лучше напрямую).
 proxy-groups:
-  - name: PROXY    # общий выход: fallback по всем узлам, empty-fallback DIRECT
+  - name: PROXY    # общий выход: fallback Fast → DIRECT
     type: fallback
-    include-all: true
-    empty-fallback: DIRECT
+    proxies:
+      - Fast
+      - DIRECT
     url: http://www.gstatic.com/generate_204
     interval: 600
     timeout: 5000
@@ -164,7 +165,7 @@ proxy-groups:
     interval: 600
     tolerance: 50
     timeout: 5000
-    lazy: true
+    lazy: false
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Rocket.png
 
   - name: YouTube    # отдельный выход для YouTube (fallback)
