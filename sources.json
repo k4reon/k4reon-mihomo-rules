@@ -20,7 +20,15 @@
   "torrent": {
     "domains": [
       { "url": "https://cdn.jsdelivr.net/gh/hydraponique/roscomvpn-geosite/release/mihomo/torrent.mrs", "format": "mrs" },
-      { "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/trackerslist.list", "format": "plain" }
+      { "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/trackerslist.list", "format": "plain" },
+      { "url": "https://raw.githubusercontent.com/legiz-ru/mihomo-rule-sets/main/other/torrent-trackers.mrs", "format": "mrs" },
+      { "url": "https://raw.githubusercontent.com/legiz-ru/mihomo-rule-sets/main/other/torrent-websites.mrs", "format": "mrs" },
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Mihomo/PrivateTracker.mrs", "format": "mrs" },
+      { "url": "https://raw.githubusercontent.com/HYBB-rash/trackers_list_rule/main/dist/trackers_list_rule.yaml", "format": "loon" }
+    ],
+    "ipcidr": [
+      { "url": "https://raw.githubusercontent.com/Keviin560/Shunt_Rules/main/rule/Mihomo/PrivateTracker_IP.mrs", "format": "mrs" },
+      { "url": "https://raw.githubusercontent.com/HYBB-rash/trackers_list_rule/main/dist/trackers_list_rule.yaml", "format": "loon" }
     ]
   },
   "youtube": {

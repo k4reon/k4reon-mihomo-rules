@@ -222,6 +222,7 @@ rule-providers:
   k4reon-ru-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-domains.mrs }
   k4reon-ru-classical: { <<: *classical, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-ru-classical.txt }
   k4reon-torrent-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-torrent-domains.mrs }
+  k4reon-torrent-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-torrent-ip.mrs }
   k4reon-youtube-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-domains.mrs }
   k4reon-youtube-ip: { <<: *ipcidr, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-youtube-ip.mrs }
   k4reon-games-domains: { <<: *domain, url: https://raw.githubusercontent.com/k4reon/k4reon-mihomo-rules/main/dist/k4reon-games-domains.mrs }
@@ -292,6 +293,7 @@ rules:
 
   # --- Торренты ---
   - RULE-SET,k4reon-torrent-domains,DIRECT
+  - RULE-SET,k4reon-torrent-ip,DIRECT,no-resolve
 
   # --- YouTube ---
   - RULE-SET,k4reon-youtube-domains,YouTube

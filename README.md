@@ -59,19 +59,19 @@ https://ssclash.notion.site/Mihomo-SSClash-15989188f6b48051a97fc887adea736a
 |---|---:|---:|---|
 | private | 133 | 15 | DIRECT |
 | ads | 131 | — | REJECT |
-| ru | 1886 | — | DIRECT |
+| ru | 1887 | — | DIRECT |
 | ru-classical | 11 TLD | — | DIRECT |
-| torrent | 491 | — | DIRECT |
+| torrent | 4277 | 4 | DIRECT |
 | youtube | 179 | 2 | YouTube |
-| games | 942 | 63 | Games |
+| games | 952 | 65 | Games |
 | discord | 29 | 1 | Discord |
-| ai | 217 | 2 | Ai |
+| ai | 218 | 2 | Ai |
 | google | 1047 | 4 | DIRECT |
 | messengers | 41 | 24 | Messengers |
 | social | 609 | 23 | Fast |
 | custom | 28 | — | PROXY / DIRECT |
 
-Итого около 5733 доменов и 134 CIDR.
+Итого около 9531 доменов и 140 CIDR.
 
 Полные объединённые списки по каждой категории лежат в `dist/lists/`
 (`k4reon-<категория>-domains.txt` и `k4reon-<категория>-ip.txt`).
@@ -109,9 +109,13 @@ rule-providers и rules. Их можно брать целиком, а не со
   — `games`, `private`, `trackerslist`, `telegramip`;
 - [Keviin560/Shunt_Rules](https://github.com/Keviin560/Shunt_Rules)
   — Google, Steam, YouTube, Gemini, AI, Discord, Telegram, WhatsApp,
-  соцсети и IP-списки;
+  соцсети, PrivateTracker и IP-списки;
 - [hydraponique/roscomvpn-geosite](https://cdn.jsdelivr.net/gh/hydraponique/roscomvpn-geosite/release/mihomo/)
-  и `roscomvpn-geoip` — torrent и private IP.
+  и `roscomvpn-geoip` — torrent и private IP;
+- [legiz-ru/mihomo-rule-sets](https://github.com/legiz-ru/mihomo-rule-sets)
+  — `torrent-trackers` и `torrent-websites`;
+- [HYBB-rash/trackers_list_rule](https://github.com/HYBB-rash/trackers_list_rule)
+  — публичные трекеры с IP-адресами.
 
 [jameszeroX/zkeen-ip](https://github.com/jameszeroX/zkeen-ip) проверен,
 но не используется: `ru` — 13.5k CIDR, которые дублируют `GEOIP,RU`,
@@ -282,7 +286,7 @@ Full-cone NAT: на порт клиента создаётся одно NAT-от
 2. `ads` → REJECT
 3. `custom-proxy` → PROXY (выше RU, иначе `.ru` из `ru-classical` перебьёт)
 4. `ru` → DIRECT
-5. `torrent` → DIRECT
+5. `torrent` + `torrent-ip` → DIRECT
 6. `youtube` → YouTube
 7. `games` → Games
 8. `discord` → Discord
@@ -346,6 +350,9 @@ games@domain
 games@ip
 steam@domain
 discord@domain
+torrent@domains
+privatetracker@domains
+privatetracker@ipcidr
 ru-whitelist
 category-ru@domain
 ```

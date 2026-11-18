@@ -116,6 +116,10 @@ def parse_loon(text, kind):
         line = line.strip()
         if not line or line.startswith("#"):
             continue
+        # Some sources publish the same syntax as a YAML payload list:
+        #   - DOMAIN-SUFFIX,example.com
+        if line.startswith("- "):
+            line = line[2:].strip()
         parts = line.split(",")
         head = parts[0]
         if kind == "domain":
