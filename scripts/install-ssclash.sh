@@ -143,9 +143,6 @@ else
     die "не найден apk или opkg."
 fi
 
-# Подтягиваем актуальную версию SSClash-Go с GitHub (при наличии сети).
-init_go_version
-
 if [ "$PM" = "apk" ]; then
     SS4_FILE="$SS4_APK"
     SS4_SHA="$SS4_APK_SHA"
@@ -278,6 +275,9 @@ init_go_version() {
         GO_SVC_SHA=""
     fi
 }
+
+# Подтягиваем актуальную версию SSClash-Go с GitHub (при наличии сети).
+init_go_version
 
 set_core() {
     ver="$1"
