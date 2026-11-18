@@ -637,7 +637,7 @@ install_core() {
     old_mb=0
     [ -x "$CLASH_BIN" ] && old_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
     avail=$(free_mb /overlay)
-    need_mb=$(( new_mb + 2 - old_mb ))
+    need_mb=$(( new_mb - old_mb ))
     [ "$need_mb" -lt 1 ] && need_mb=1
     if [ -n "$avail" ] && [ "$avail" -lt "$need_mb" ]; then
         say "  [!] для замены ядра нужно ~${need_mb} МБ свободно, сейчас ${avail} МБ."
@@ -1098,7 +1098,7 @@ install_go() {
     delta_core=$(( core_mb - old_core_mb ))
     [ "$delta_core" -lt 0 ] && delta_core=0
     case "$mode" in
-        core)   need_mb=$(( delta_core + 2 )) ;;
+        core)   need_mb=$(( delta_core )) ;;
         client) need_mb=16 ;;
         *)      need_mb=$(( 16 + delta_core + 2 )) ;;
     esac
@@ -1384,7 +1384,7 @@ install_ss4() {
     delta_core=$(( core_mb - old_core_mb ))
     [ "$delta_core" -lt 0 ] && delta_core=0
     case "$mode" in
-        core)   need_mb=$(( delta_core + 2 )) ;;
+        core)   need_mb=$(( delta_core )) ;;
         client) need_mb=16 ;;
         *)      need_mb=$(( 16 + delta_core + 2 )) ;;
     esac
