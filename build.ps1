@@ -16,15 +16,12 @@ $mihomoVersion = if ($env:MIHOMO_VERSION) { $env:MIHOMO_VERSION } else { 'v1.19.
 
 if (-not (Test-Path $exe)) {
     Write-Host "Downloading mihomo $mihomoVersion for Windows..."
-    $release = Invoke-RestMethod "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/$mihomoVersion" `
-        -Headers @{ 'User-Agent' = 'k4reon-mrs-build' }
-    $asset = $release.assets |
-        Where-Object { $_.name -match 'windows-amd64' -and $_.name -notmatch 'compatible' -and $_.name -like '*.zip' } |
-        Select-Object -First 1
-    if (-not $asset) { throw 'mihomo windows-amd64 zip asset not found' }
+    # Прямая ссылка на релизный ассет: не дергаем api.github.com,
+    # иначе сборка упирается в лимит анонимных запросов (403).
+    $url = "https://github.com/MetaCubeX/mihomo/releases/download/$mihomoVersion/mihomo-windows-amd64-v1-$mihomoVersion.zip"
 
     $zip = Join-Path $tools 'mihomo.zip'
-    Invoke-WebRequest $asset.browser_download_url -OutFile $zip -UseBasicParsing
+    Invoke-WebRequest $url -OutFile $zip -UseBasicParsing
     $tmp = Join-Path $tools 'unpack'
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
     Expand-Archive $zip -DestinationPath $tmp -Force

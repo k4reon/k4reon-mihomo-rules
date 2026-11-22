@@ -15,13 +15,9 @@ MIHOMO_VERSION="${MIHOMO_VERSION:-v1.19.24}"
 
 if [ ! -x "$TOOLS/mihomo" ]; then
   echo "Downloading mihomo $MIHOMO_VERSION for $(uname -s)/$(uname -m)..."
-  URL="$(curl -fsSL "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/$MIHOMO_VERSION" \
-    | grep browser_download_url \
-    | grep 'linux-amd64' \
-    | grep -v 'compatible' \
-    | head -n1 \
-    | cut -d '"' -f4)"
-  [ -n "$URL" ] || { echo "mihomo asset not found" >&2; exit 1; }
+  # Прямая ссылка на релизный ассет: не дергаем api.github.com,
+  # иначе сборка на GitHub Actions упирается в лимит анонимных запросов (403).
+  URL="https://github.com/MetaCubeX/mihomo/releases/download/$MIHOMO_VERSION/mihomo-linux-amd64-v1-$MIHOMO_VERSION.gz"
 
   case "$URL" in
     *.gz)

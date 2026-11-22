@@ -2578,8 +2578,11 @@
 +.t.overflow.biz
 +.t.ppnow.net
 +.t.xatab-repack.com
++.t1.hloli.org
++.t1.itrus.su
 +.t1.leech.ie
 +.t1.pow7.com
++.t2.itrus.su
 +.t2.leech.ie
 +.t2.pow7.com
 +.t3.leech.ie
@@ -3161,6 +3164,7 @@
 +.tr4ck3r.duckdns.org
 +.trace.corrupt-net.org
 +.track.sextorrent.to
++.track3r.site
 +.tracker-banzai.no-ip.org
 +.tracker-global.tclclouds.com
 +.tracker-mk.org
@@ -3175,6 +3179,7 @@
 +.tracker.36dm.com
 +.tracker.3arbya.com
 +.tracker.7471.top
++.tracker.aburaya.live
 +.tracker.acgnx.se
 +.tracker.adgk.net
 +.tracker.aladar.com
@@ -3244,6 +3249,7 @@
 +.tracker.e-utp.net
 +.tracker.eatshoe.com
 +.tracker.eddie4.nl
++.tracker.edkj.club
 +.tracker.electro-torrent.pl
 +.tracker.elektronik.ro
 +.tracker.etn.fm
@@ -3288,6 +3294,7 @@
 +.tracker.iperson.xyz
 +.tracker.ipv6tracker.org
 +.tracker.ipv6tracker.ru
++.tracker.ixuexi.click
 +.tracker.jae.moe
 +.tracker.k.vu
 +.tracker.kali.org
