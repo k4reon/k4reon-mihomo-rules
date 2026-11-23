@@ -704,6 +704,7 @@
 +.clonebits.org
 +.club-mst3k.com
 +.cmovieshd.bz
++.cn.pcfreetime.com
 +.cnp.cx
 +.coalgirls.wakku.to
 +.cocaine.cl
@@ -3397,6 +3398,7 @@
 +.tracker.swateam.org.uk
 +.tracker.synclub.org
 +.tracker.t-1.org
++.tracker.t-rb.org
 +.tracker.tambovnet.org
 +.tracker.tamersunion.org
 +.tracker.tasvideos.org
