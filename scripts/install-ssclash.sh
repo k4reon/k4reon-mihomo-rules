@@ -93,10 +93,11 @@ done
 
 # ---------------- версии и адреса --------------------------------
 
-GO_VER="7.7.4"
-GO_TAG="v7.7.4"
-GO_SHA="d26f1aa6e25124c7da6d06b2cbdcb1feaa73d5da09cb5aabebeb212bc1e23394"
-GO_SVC_SHA="5f6d761e2df4152229c7795d5eabc03db924925a7ec2322af5bb087dadba33b5"
+GO_VER="7.7.6"
+GO_TAG="v7.7.6"
+GO_SHA="c1243a836211a8bbaa534a2562868ef53410df5f4853f763c515c6538b9c392e"
+GO_SVC_SHA="94bc78bda8b041e89df5b7d81d7b797689224a50f5d554b08276d67d6e61a76a"
+GO_VERSION_CHECKED=0
 
 SS4_VER="4.7.1"
 SS4_TAG="v4.7.1"
@@ -199,6 +200,86 @@ fetch_github() {
     set -- "$url"
     for p in $PROXIES; do set -- "$@" "$p$url"; done
     fetch "$out" "$@"
+}
+
+fetch_meta() {
+    # fetch_meta <url> [<url> ...] -> stdout
+    # Короткие таймауты: это только проверка версии, а не загрузка файлов.
+    for url in "$@"; do
+        for tool in curl wget uclient-fetch; do
+            case "$tool" in
+                curl)          command -v curl >/dev/null 2>&1 || continue ;;
+                wget)          command -v wget >/dev/null 2>&1 || continue ;;
+                uclient-fetch) command -v uclient-fetch >/dev/null 2>&1 || continue ;;
+            esac
+            out="$(
+                unset http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY
+                case "$tool" in
+                    curl)
+                        curl -fsSL --connect-timeout 5 --max-time 10 "$url" 2>/dev/null
+                        ;;
+                    wget)
+                        wget -q -T 10 -O - "$url" 2>/dev/null
+                        ;;
+                    uclient-fetch)
+                        uclient-fetch -q -T 10 -O - "$url" 2>/dev/null
+                        ;;
+                esac
+            )" || out=""
+            if [ -n "$out" ]; then
+                printf '%s' "$out"
+                return 0
+            fi
+        done
+    done
+    return 1
+}
+
+resolve_go_version() {
+    # Узнаём последнюю версию SSClash-Go без GitHub API, если возможно.
+    # releases/latest отдаёт redirect на /releases/tag/vX.Y.Z и не упирается
+    # в лимит анонимных запросов API.
+    [ "$GO_VERSION_CHECKED" -eq 1 ] && return 0
+    GO_VERSION_CHECKED=1
+
+    latest=""
+    if command -v curl >/dev/null 2>&1; then
+        final="$(curl -sIL --connect-timeout 5 --max-time 10 \
+            -o /dev/null -w '%{url_effective}' \
+            https://github.com/zerolabnet/SSClash-Go/releases/latest 2>/dev/null)" || final=""
+        case "$final" in
+            */tag/v[0-9]*) latest="${final##*/tag/}" ;;
+        esac
+    fi
+
+    if [ -z "$latest" ]; then
+        meta="$(fetch_meta https://api.github.com/repos/zerolabnet/SSClash-Go/releases/latest)" || meta=""
+        latest="$(printf '%s' "$meta" \
+            | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+            | head -n1)"
+    fi
+
+    case "$latest" in
+        v[0-9]*) ;;
+        *)
+            say "  не удалось проверить последнюю версию SSClash-Go — использую $GO_VER"
+            return 0
+            ;;
+    esac
+
+    GO_TAG="$latest"
+    GO_VER="${latest#v}"
+    GO_BASE="https://github.com/zerolabnet/SSClash-Go/releases/download/$GO_TAG"
+
+    sums="$(fetch_meta "https://github.com/zerolabnet/SSClash-Go/releases/download/$GO_TAG/sha256sums.txt")" || sums=""
+    if [ -n "$sums" ]; then
+        GO_SHA="$(printf '%s\n' "$sums" | awk -v f="ssclash-linux-$ARCH" '$2 == f {print $1; exit}')"
+        GO_SVC_SHA="$(printf '%s\n' "$sums" | awk -v f="ssclash-openwrt-service.tar.gz" '$2 == f {print $1; exit}')"
+    else
+        GO_SHA=""
+        GO_SVC_SHA=""
+        say "  предупреждение: sha256sums.txt для $GO_VER не получен — проверка SHA пропущена"
+    fi
 }
 
 check_sha() {
@@ -366,12 +447,37 @@ ask_web_password() {
         say "Пароль веб-интерфейса уже задан — оставляю без изменений."
         return 0
     fi
-    printf 'Пароль веб-интерфейса (мин. 8, пусто — не задавать): '
-    stty -echo 2>/dev/null
-    read -r WEB_PASSWORD
-    stty echo 2>/dev/null
-    say ""
-    if [ -n "$WEB_PASSWORD" ] && [ "${#WEB_PASSWORD}" -lt 8 ]; then
+    tries=0
+    while [ "$tries" -lt 3 ]; do
+        printf 'Пароль веб-интерфейса (мин. 8, пусто — не задавать): '
+        stty -echo 2>/dev/null
+        read -r pw1
+        stty echo 2>/dev/null
+        say ""
+
+        [ -n "$pw1" ] || { WEB_PASSWORD=""; return 0; }
+
+        printf 'Повторите пароль: '
+        stty -echo 2>/dev/null
+        read -r pw2
+        stty echo 2>/dev/null
+        say ""
+
+        if [ "$pw1" = "$pw2" ]; then
+            WEB_PASSWORD="$pw1"
+            break
+        fi
+
+        tries=$((tries + 1))
+        say "Пароли не совпали — попробуйте ещё раз."
+    done
+
+    if [ -z "$WEB_PASSWORD" ]; then
+        say "Пароль не задан."
+        return 0
+    fi
+
+    if [ "${#WEB_PASSWORD}" -lt 8 ]; then
         say "Пароль короче 8 символов — не сохраняю."
         WEB_PASSWORD=""
     fi
@@ -631,25 +737,9 @@ install_core() {
         return 1
     fi
 
-    # Замена идёт через mv из tmpfs: старый файл при этом усекается, поэтому
-    # нужно, чтобы места с запасом хватало на новое ядро.
-    new_mb=$(( $(wc -c < /tmp/clash.new 2>/dev/null || echo 0) / 1048576 + 1 ))
-    old_mb=0
-    [ -x "$CLASH_BIN" ] && old_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
-    # Для базового ядра v1.19.24 проверку места не делаем — позволяем
-    # ставить вплоть до полного заполнения флеш-памяти.
-    if [ "$CORE_VER" != "v1.19.24" ]; then
-        avail=$(free_mb /overlay)
-        need_mb=$(( new_mb - old_mb ))
-        [ "$need_mb" -lt 1 ] && need_mb=1
-        if [ -n "$avail" ] && [ "$avail" -lt "$need_mb" ]; then
-            say "  [!] для замены ядра нужно ~${need_mb} МБ свободно, сейчас ${avail} МБ."
-            say "      установка отменена, старое ядро не тронуто."
-            rm -f /tmp/clash.new
-            return 1
-        fi
-    fi
-
+    # Проверку свободного места не делаем: UBIFS сжимает файлы, и старая
+    # проверка часто ошибалась. Если места реально не хватит, mv ниже
+    # завершится ошибкой, и старое ядро останется на месте.
     make_dirs
     mv /tmp/clash.new "$CLASH_BIN" || { say "Не удалось заменить ядро."; return 1; }
     if ! "$CLASH_BIN" -v >/dev/null 2>&1; then
@@ -1002,6 +1092,10 @@ remove_ss4_for_go() {
 
 install_go() {
     mode="${1:-full}"
+    case "$mode" in
+        core) ;;
+        *) resolve_go_version ;;
+    esac
     say ""
 
     case "$mode" in
@@ -1086,71 +1180,9 @@ install_go() {
 
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
-    # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
-    # не нужна. Клиент и профили пишутся в /opt/clash, там нужен запас.
-    # Сколько реально нужно: клиент ~16 МБ, плюс прирост ядра (замена
-    # освобождает старое, поэтому считается только разница), плюс запас.
-    box=$(free_mb /overlay)
-    old_core_mb=0
-    [ -x "$CLASH_BIN" ] && old_core_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
-    # При UPX ядро занимает ~10 МБ вместо 32–55 МБ.
-    if [ "$USE_UPX" -eq 1 ]; then
-        core_mb=12
-    else
-        core_mb=$(core_size_mb)
-    fi
-    delta_core=$(( core_mb - old_core_mb ))
-    [ "$delta_core" -lt 0 ] && delta_core=0
-    case "$mode" in
-        core)   need_mb=$(( delta_core )) ;;
-        client) need_mb=16 ;;
-        *)      need_mb=$(( 16 + delta_core + 2 )) ;;
-    esac
-    [ "$need_mb" -lt 4 ] && need_mb=4
-    # Для базового ядра v1.19.24 и для установки только клиента не блокируем
-    # установку по свободному месту.
-    if [ "$mode" != "client" ] && [ "$mode" != "client-update" ] \
-       && [ "$CORE_VER" != "v1.19.24" ] \
-       && [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
-        if [ "$USE_UPX" -eq 1 ]; then
-            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
-            say "  Даже сжатое ядро UPX не влезает. Освободите место или используйте extroot."
-        else
-            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
-            say "  Освободите место в /overlay, выберите ядро поменьше (v1.19.24 — 32 МБ)"
-            say "  или используйте сжатое ядро UPX (меню 9 / флаг --upx)."
-        fi
-        return 1
-    fi
-
-    # /tmp — это tmpfs (RAM): архив ядра и распакованный бинарник лежат там
-    # одновременно, поэтому нужна память под оба.
-    if [ "$FORCE" -eq 0 ]; then
-        ram="$(mem_available_mb)"; [ -n "$ram" ] || ram=0
-        swp="$(mem_swap_free_mb)"; [ -n "$swp" ] || swp=0
-        mem_have=$(( ram + swp ))
-        case "$mode" in
-            client) mem_need=29 ;;
-            *)      mem_need=$(( $(core_size_mb) * 2 + 16 )) ;;
-        esac
-        if [ "$mem_have" -lt "$mem_need" ]; then
-            say "Мало свободной памяти: ${mem_have} МБ (RAM + swap), нужно ~${mem_need} МБ."
-            say "  Ядро распаковывается в /tmp (tmpfs) — это тоже RAM."
-            say "  Варианты: компактное ядро v1.19.24 (32 МБ) или освободить память."
-            return 1
-        fi
-        if [ "$mode" != "client" ]; then
-            tmp_have="$(free_mb /tmp)"
-            tmp_need=$(( $(core_size_mb) * 2 + 8 ))
-            if [ -n "$tmp_have" ] && [ "$tmp_have" -lt "$tmp_need" ]; then
-                say "Мало места в /tmp: ${tmp_have} МБ, нужно ~${tmp_need} МБ."
-                say "  Там одновременно лежат архив ядра и распакованный бинарник."
-                say "  Освободите /tmp или выберите компактное ядро v1.19.24."
-                return 1
-            fi
-        fi
-    fi
-
+    # Проверки свободного места и RAM намеренно убраны: на практике
+    # UBIFS сжимает файлы, и скрипт часто ругался зря. Если места реально
+    # не хватит, установка завершится ошибкой записи.
     install_deps
 
     tmp_bin="/tmp/ssclash-linux-$ARCH"
@@ -1376,71 +1408,9 @@ install_ss4() {
 
     [ "$(id -u)" = "0" ] || { say "Нужны права root."; return 1; }
 
-    # Ядро качается в /tmp (tmpfs) и заменяет файл на месте — флеш почти
-    # не нужна. Клиент и профили пишутся в /opt/clash, там нужен запас.
-    # Сколько реально нужно: клиент ~16 МБ, плюс прирост ядра (замена
-    # освобождает старое, поэтому считается только разница), плюс запас.
-    box=$(free_mb /overlay)
-    old_core_mb=0
-    [ -x "$CLASH_BIN" ] && old_core_mb=$(( $(wc -c < "$CLASH_BIN" 2>/dev/null || echo 0) / 1048576 + 1 ))
-    # При UPX ядро занимает ~10 МБ вместо 32–55 МБ.
-    if [ "$USE_UPX" -eq 1 ]; then
-        core_mb=12
-    else
-        core_mb=$(core_size_mb)
-    fi
-    delta_core=$(( core_mb - old_core_mb ))
-    [ "$delta_core" -lt 0 ] && delta_core=0
-    case "$mode" in
-        core)   need_mb=$(( delta_core )) ;;
-        client) need_mb=16 ;;
-        *)      need_mb=$(( 16 + delta_core + 2 )) ;;
-    esac
-    [ "$need_mb" -lt 4 ] && need_mb=4
-    # Для базового ядра v1.19.24 и для установки только клиента не блокируем
-    # установку по свободному месту.
-    if [ "$mode" != "client" ] && [ "$mode" != "client-update" ] \
-       && [ "$CORE_VER" != "v1.19.24" ] \
-       && [ -n "$box" ] && [ "$box" -lt "$need_mb" ]; then
-        if [ "$USE_UPX" -eq 1 ]; then
-            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
-            say "  Даже сжатое ядро UPX не влезает. Освободите место или используйте extroot."
-        else
-            say "Мало места во флеш-памяти: свободно ${box} МБ, нужно ~${need_mb} МБ."
-            say "  Освободите место в /overlay, выберите ядро поменьше (v1.19.24 — 32 МБ)"
-            say "  или используйте сжатое ядро UPX (меню 9 / флаг --upx)."
-        fi
-        return 1
-    fi
-
-    # /tmp — это tmpfs (RAM): архив ядра и распакованный бинарник лежат там
-    # одновременно, поэтому нужна память под оба.
-    if [ "$FORCE" -eq 0 ]; then
-        ram="$(mem_available_mb)"; [ -n "$ram" ] || ram=0
-        swp="$(mem_swap_free_mb)"; [ -n "$swp" ] || swp=0
-        mem_have=$(( ram + swp ))
-        case "$mode" in
-            client) mem_need=29 ;;
-            *)      mem_need=$(( $(core_size_mb) * 2 + 16 )) ;;
-        esac
-        if [ "$mem_have" -lt "$mem_need" ]; then
-            say "Мало свободной памяти: ${mem_have} МБ (RAM + swap), нужно ~${mem_need} МБ."
-            say "  Ядро распаковывается в /tmp (tmpfs) — это тоже RAM."
-            say "  Варианты: компактное ядро v1.19.24 (32 МБ) или освободить память."
-            return 1
-        fi
-        if [ "$mode" != "client" ]; then
-            tmp_have="$(free_mb /tmp)"
-            tmp_need=$(( $(core_size_mb) * 2 + 8 ))
-            if [ -n "$tmp_have" ] && [ "$tmp_have" -lt "$tmp_need" ]; then
-                say "Мало места в /tmp: ${tmp_have} МБ, нужно ~${tmp_need} МБ."
-                say "  Там одновременно лежат архив ядра и распакованный бинарник."
-                say "  Освободите /tmp или выберите компактное ядро v1.19.24."
-                return 1
-            fi
-        fi
-    fi
-
+    # Проверки свободного места и RAM намеренно убраны: на практике
+    # UBIFS сжимает файлы, и скрипт часто ругался зря. Если места реально
+    # не хватит, установка завершится ошибкой записи.
     if [ "$mode" != "core" ]; then
         if ! choose_ss4_profile; then return 1; fi
     fi
@@ -1676,6 +1646,7 @@ while :; do
 done
 
 if [ "$run_go_menu" = "1" ]; then
+    resolve_go_version
     while :; do
         say ""
         say "SSClash-Go"
